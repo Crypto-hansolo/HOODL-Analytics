@@ -106,6 +106,15 @@ export interface PoolV3Data {
   slot0: PoolV3Field<Slot0>
 }
 
+/** A quote is only valid after the pool identifies HOODL/WETH and both decimals. */
+export interface PoolSpotQuote {
+  status: 'on-chain' | 'unavailable'
+  wethPerHoodl: number | null
+  token0Symbol: string | null
+  token1Symbol: string | null
+  error: string | null
+}
+
 function toField<T>(result: PromiseSettledResult<T>): PoolV3Field<T> {
   if (result.status === 'fulfilled') {
     return { status: 'on-chain', value: result.value, error: null }
