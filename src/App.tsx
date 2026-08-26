@@ -5,6 +5,8 @@ import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, STALE_AFTER_MS } from './config'
 import { erc20BalanceOf, erc20Decimals, erc20Name, erc20Symbol, erc20TotalSupply } from './lib/erc20'
 import { ethBlockNumber, ethChainId, ethGetCode, RpcError } from './lib/rpc'
 import { formatCompactUnits, formatInteger, formatUnits, isValidAddress, truncateAddress } from './lib/format'
+import { fetchPoolV3Data } from './lib/uniswapV3'
+import type { PoolV3Data, PoolV3Field } from './lib/uniswapV3'
 
 type Tab = 'Overview' | 'Trading' | 'Fees & Rewards' | 'Pools' | 'Holders'
 type ChainState = { chainId: number | null; block: bigint | null; deployed: boolean | null; error: string | null }
@@ -25,6 +27,32 @@ function EmptyState({ title, body, todo }: { title: string; body: string; todo: 
   return <div className="empty"><div className="empty-icon">◌</div><h3>{title}</h3><p>{body}</p><small><b>TODO</b> {todo}</small></div>
 }
 
+function formatFeeTier(fee: number): string {
+  return `${(fee / 10_000).toLocaleString('en-US', { maximumFractionDigits: 2 })}% (${formatInteger(fee)})`
+}
+
+function PoolV3Metric<T>({ label, field, render }: { label: string; field: PoolV3Field<T>; render: (value: T) => string }) {
+  const value = field.status === 'on-chain' && field.value !== null ? render(field.value) : '—'
+  return <Metric label={label} value={value} source={field.status === 'on-chain' ? 'On-chain' : 'Unavailable'} />
+}
+
+function PoolV3AddressRow({ label, field }: { label: string; field: PoolV3Field<string> }) {
+  const available = field.status === 'on-chain' && field.value !== null
+  return (
+    <div className="address-row">
+      <span>
+        <label>{label}</label>
+        <code>{available ? field.value : 'Unavailable — RPC call did not return a value'}</code>
+      </span>
+      {available ? (
+        <a href={`${CHAIN.explorerUrl}/address/${field.value}`} target="_blank" rel="noreferrer">↗</a>
+      ) : (
+        <Badge tone="muted">Unavailable</Badge>
+      )}
+    </div>
+  )
+}
+
 function Chart({ title, subtitle }: { title: string; subtitle: string }) {
   return <section className="panel chart-panel"><div className="panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div><div className="range"><button className="selected">24H</button><button>7D</button><button>30D</button><button>ALL</button></div></div><div className="chart-empty"><svg viewBox="0 0 800 190" preserveAspectRatio="none" aria-hidden="true"><path d="M0 150H800M0 100H800M0 50H800" /><path className="ghost-line" d="M0 150 C100 145 130 120 210 132 S340 80 420 110 S570 55 640 86 S735 72 800 42" /></svg><div><span>Chart data unavailable</span><small>Connect a verified DEX/indexer provider to populate historical analytics.</small></div></div></section>
 }
@@ -34,7 +62,7 @@ function Overview({ token, chain }: { token: TokenState; chain: ChainState }) {
     <div className="hero-grid"><div className="hero-copy"><Badge tone="live">READ-ONLY TERMINAL</Badge><h1>Understand the<br /><em>HOODL economy.</em></h1><p>Track trading activity, liquidity, and WETH distributions on Robinhood Chain — with every metric sourced, timestamped, and honest.</p><div className="hero-links"><a href={`${CHAIN.explorerUrl}/token/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">View token on Blockscout ↗</a><span>·</span><span>Chain {CHAIN.id}</span></div></div><div className="network-card"><div className="network-orbit"><span>H</span></div><div><span className="eyebrow">NETWORK STATUS</span><h3>{CHAIN.name}</h3><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'RPC unavailable' : 'Read-only connected'}</Badge></div><div className="network-meta"><span>Chain ID <b>{chain.chainId ?? CHAIN.id}</b></span><span>Latest block <b>{chain.block ? formatInteger(Number(chain.block)) : '—'}</b></span></div></div></div>
     <div className="metrics"><Metric label="Token name" value={token.name ?? 'HOODL'} source={token.name ? 'On-chain' : 'Unavailable'} accent /><Metric label="Symbol" value={token.symbol ?? 'HOODL'} source={token.symbol ? 'On-chain' : 'Unavailable'} /><Metric label="Total supply" value={token.supply !== null && token.decimals !== null ? formatCompactUnits(token.supply, token.decimals) : '—'} source={token.supply ? 'Calculated' : 'Unavailable'} /><Metric label="Price" value="—" /><Metric label="24h volume" value="—" /><Metric label="WETH distributed" value="—" /></div>
     <div className="two-col"><Chart title="Trading activity" subtitle="Volume over time · exact values appear when indexed" /><section className="panel status-panel"><div className="panel-head"><div><h2>Data integrity</h2><p>What is verified right now</p></div><Badge tone="live">TRANSPARENT</Badge></div><div className="status-row"><span><i className="dot green" />Token contract</span><b>{token.error ? 'Unavailable' : 'Configured'}</b></div><div className="status-row"><span><i className="dot green" />Network identity</span><b>{chain.chainId === CHAIN.id ? 'Confirmed' : 'Pending'}</b></div><div className="status-row"><span><i className="dot gray" />DEX / pool analytics</span><b>Awaiting indexer</b></div><div className="status-row"><span><i className="dot gray" />Fees / WETH rewards</span><b>Awaiting verification</b></div><div className="source-note">No mock values are shipped. Unknown metrics stay unavailable until a verified source is configured.</div></section></div>
-    <div className="two-col"><section className="panel contract-panel"><div className="panel-head"><div><h2>Contracts</h2><p>Centralized, clickable configuration</p></div></div><div className="address-row"><span><label>HOODL TOKEN</label><code>{HOODL_TOKEN.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">↗</a></div><div className="address-row"><span><label>CONFIGURED POOL · UNVERIFIED MECHANICS</label><code>{CONFIGURED_POOL.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${CONFIGURED_POOL.address}`} target="_blank" rel="noreferrer">↗</a></div></section><section className="panel block-panel"><div className="panel-head"><div><h2>On-chain snapshot</h2><p>Freshness is shown, never implied</p></div><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'STALE' : 'LIVE'}</Badge></div><div className="snapshot"><span>Last updated <b>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b></span><span>Contract deployed <b>{chain.deployed === null ? '—' : chain.deployed ? 'Yes' : 'No'}</b></span><span>Decimals <b>{token.decimals ?? '—'}</b></span></div></section></div>
+    <div className="two-col"><section className="panel contract-panel"><div className="panel-head"><div><h2>Contracts</h2><p>Centralized, clickable configuration</p></div></div><div className="address-row"><span><label>HOODL TOKEN</label><code>{HOODL_TOKEN.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">↗</a></div><div className="address-row"><span><label>{CONFIGURED_POOL.poolType.toUpperCase()} POOL · {CONFIGURED_POOL.pair}</label><code>{CONFIGURED_POOL.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${CONFIGURED_POOL.address}`} target="_blank" rel="noreferrer">↗</a></div></section><section className="panel block-panel"><div className="panel-head"><div><h2>On-chain snapshot</h2><p>Freshness is shown, never implied</p></div><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'STALE' : 'LIVE'}</Badge></div><div className="snapshot"><span>Last updated <b>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b></span><span>Contract deployed <b>{chain.deployed === null ? '—' : chain.deployed ? 'Yes' : 'No'}</b></span><span>Decimals <b>{token.decimals ?? '—'}</b></span></div></section></div>
   </>
 }
 
@@ -44,20 +72,52 @@ function WalletLookup() {
   return <section className="panel wallet"><div className="panel-head"><div><h2>Wallet lookup</h2><p>Public read-only balanceOf() query</p></div><Badge tone="live">ON-CHAIN</Badge></div><form onSubmit={submit}><input value={address} onChange={e => setAddress(e.target.value)} placeholder="0x wallet address" spellCheck={false} /><button disabled={busy}>{busy ? 'Reading…' : 'Query balance ↗'}</button></form>{error && <p className="form-error">{error}</p>}{result && <div className="wallet-result"><span>HOODL balance</span><b>{result}</b><code>{truncateAddress(address)}</code></div>}</section>
 }
 
-function TabContent({ tab, token, chain }: { tab: Tab; token: TokenState; chain: ChainState }) {
+function PoolsTab({ poolV3 }: { poolV3: PoolV3Data | null }) {
+  const anyOnChain = poolV3 ? Object.values(poolV3).some((f) => f.status === 'on-chain') : false
+  return <>
+    <section className="panel pool-card">
+      <div>
+        <Badge tone="live">{`${CONFIGURED_POOL.poolType.toUpperCase()} · ${CONFIGURED_POOL.pair}`}</Badge>
+        <h2>Liquidity pool</h2>
+        <code>{CONFIGURED_POOL.address}</code>
+        <p>Configured {CONFIGURED_POOL.poolType} pool for the {CONFIGURED_POOL.pair} pair. Reserves, price, TVL, and fee/volume figures are only ever read live from the pool contract — nothing below is fabricated, and any field the RPC call fails to return is marked Unavailable.</p>
+      </div>
+      <a className="outline-btn" href={`${CHAIN.explorerUrl}/address/${CONFIGURED_POOL.address}`} target="_blank" rel="noreferrer">Open explorer ↗</a>
+    </section>
+    <section className="panel">
+      <div className="panel-head"><div><h2>Pool technical details</h2><p>Read directly via eth_call against the Uniswap V3 pool interface</p></div><Badge tone={anyOnChain ? 'live' : 'warn'}>{anyOnChain ? 'ON-CHAIN' : 'RPC UNAVAILABLE'}</Badge></div>
+      <div className="metrics" style={{ marginTop: 20 }}>
+        <PoolV3Metric label="Fee tier" field={poolV3?.fee ?? { status: 'unavailable', value: null, error: null }} render={formatFeeTier} />
+        <PoolV3Metric label="Tick spacing" field={poolV3?.tickSpacing ?? { status: 'unavailable', value: null, error: null }} render={formatInteger} />
+        <PoolV3Metric label="Liquidity" field={poolV3?.liquidity ?? { status: 'unavailable', value: null, error: null }} render={(v) => v.toLocaleString('en-US')} />
+        <PoolV3Metric label="Current tick" field={poolV3 ? { status: poolV3.slot0.status, value: poolV3.slot0.value?.tick ?? null, error: poolV3.slot0.error } : { status: 'unavailable', value: null, error: null }} render={formatInteger} />
+        <PoolV3Metric label="sqrtPriceX96" field={poolV3 ? { status: poolV3.slot0.status, value: poolV3.slot0.value?.sqrtPriceX96 ?? null, error: poolV3.slot0.error } : { status: 'unavailable', value: null, error: null }} render={(v) => v.toLocaleString('en-US')} />
+        <PoolV3Metric label="Pool status" field={poolV3 ? { status: poolV3.slot0.status, value: poolV3.slot0.value?.unlocked ?? null, error: poolV3.slot0.error } : { status: 'unavailable', value: null, error: null }} render={(v) => (v ? 'Unlocked' : 'Locked')} />
+      </div>
+      <div style={{ marginTop: 4 }}>
+        <PoolV3AddressRow label="TOKEN0" field={poolV3?.token0 ?? { status: 'unavailable', value: null, error: null }} />
+        <PoolV3AddressRow label="TOKEN1" field={poolV3?.token1 ?? { status: 'unavailable', value: null, error: null }} />
+      </div>
+      <div className="source-note">token0/token1 order, fee tier, tick spacing, liquidity, and slot0 are read directly from the pool contract. Which token is WETH is not assumed here — verify via the addresses above. No price, TVL, volume, or reward figures are derived from these raw values.</div>
+    </section>
+    <EmptyState title="Pool price, TVL, volume, and rewards unavailable" body="Computing price/TVL from sqrtPriceX96 requires confirmed decimals for both pool tokens, and volume/fees/rewards require an indexed event history. None of these are fabricated." todo="Confirm token1 decimals and connect a verified swap-event indexer to enable these calculations." />
+  </>
+}
+
+function TabContent({ tab, token, chain, poolV3 }: { tab: Tab; token: TokenState; chain: ChainState; poolV3: PoolV3Data | null }) {
   if (tab === 'Overview') return <Overview token={token} chain={chain} />
   if (tab === 'Holders') return <><div className="metrics"><Metric label="Current holders" value="—" /><Metric label="Holder growth" value="—" /><Metric label="Top 10 concentration" value="—" /><Metric label="WETH earned" value="—" /></div><WalletLookup /><EmptyState title="Holder analytics awaiting indexing" body="A complete holder ranking requires indexed HOODL Transfer events. No holder counts or concentration figures are invented." todo="Configure a transfer-event indexer and persist holder snapshots." /></>
-  if (tab === 'Pools') return <><section className="panel pool-card"><div><Badge tone="muted">CONFIGURED · UNVERIFIED</Badge><h2>Liquidity pool</h2><code>{CONFIGURED_POOL.address}</code><p>Address supplied for HOODL analytics. DEX, pair composition, ABI, reserves, and fee tier are not yet verified.</p></div><a className="outline-btn" href={`${CHAIN.explorerUrl}/address/${CONFIGURED_POOL.address}`} target="_blank" rel="noreferrer">Open explorer ↗</a></section><EmptyState title="Pool analytics unavailable" body="TVL, volume, price impact, and fees require verified pool semantics and an indexed data provider." todo="Verify the pool contract and add its provider to the modular data layer." /></>
+  if (tab === 'Pools') return <PoolsTab poolV3={poolV3} />
   const title = tab === 'Trading' ? 'Trading analytics' : 'Fees & rewards'
   return <><div className="metrics"><Metric label="Total volume" value="—" /><Metric label={tab === 'Trading' ? 'Buy / sell ratio' : 'Generated fees'} value="—" /><Metric label={tab === 'Trading' ? 'Unique traders' : 'WETH distributed'} value="—" /><Metric label={tab === 'Trading' ? 'Largest trade' : 'Distribution efficiency'} value="—" /></div><Chart title={title} subtitle="Historical values will appear after verified indexing" /><EmptyState title={`${title} data unavailable`} body="No unverified DEX, fee, reward, or volume values are displayed." todo="Connect a verified indexer and document the event semantics before enabling calculations." /></>
 }
 
 function App() {
-  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [updated, setUpdated] = useState(Date.now())
-  async function load() { try { const [name, symbol, decimals, supply] = await Promise.all([erc20Name(HOODL_TOKEN.address), erc20Symbol(HOODL_TOKEN.address), erc20Decimals(HOODL_TOKEN.address), erc20TotalSupply(HOODL_TOKEN.address)]); setToken({ name, symbol, decimals, supply, error: null }) } catch (err) { setToken(v => ({ ...v, error: err instanceof Error ? err.message : 'RPC unavailable' })) } try { const [chainId, block, code] = await Promise.all([ethChainId(), ethBlockNumber(), ethGetCode(HOODL_TOKEN.address)]); setChain({ chainId, block, deployed: code !== '0x', error: null }) } catch (err) { setChain(v => ({ ...v, error: err instanceof Error ? err.message : 'RPC unavailable' })) } setUpdated(Date.now()) }
+  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [updated, setUpdated] = useState(Date.now())
+  async function load() { try { const [name, symbol, decimals, supply] = await Promise.all([erc20Name(HOODL_TOKEN.address), erc20Symbol(HOODL_TOKEN.address), erc20Decimals(HOODL_TOKEN.address), erc20TotalSupply(HOODL_TOKEN.address)]); setToken({ name, symbol, decimals, supply, error: null }) } catch (err) { setToken(v => ({ ...v, error: err instanceof Error ? err.message : 'RPC unavailable' })) } try { const [chainId, block, code] = await Promise.all([ethChainId(), ethBlockNumber(), ethGetCode(HOODL_TOKEN.address)]); setChain({ chainId, block, deployed: code !== '0x', error: null }) } catch (err) { setChain(v => ({ ...v, error: err instanceof Error ? err.message : 'RPC unavailable' })) } try { setPoolV3(await fetchPoolV3Data(CONFIGURED_POOL.address)) } catch { setPoolV3(null) } setUpdated(Date.now()) }
   useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 30_000); return () => window.clearInterval(timer) }, [])
   const stale = Date.now() - updated > STALE_AFTER_MS
-  return <div className="app-shell"><aside><div className="brand"><span className="brand-mark">H</span><span>HOODL <small>TERMINAL</small></span></div><div className="side-label">ANALYTICS</div><nav>{tabs.map(item => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}><span className="nav-icon">{['◈', '⌁', '◌', '◇', '◎'][tabs.indexOf(item)]}</span>{item}</button>)}</nav><div className="side-bottom"><div className="connection"><i className={stale || chain.error ? 'offline' : ''} />{stale || chain.error ? 'RPC unavailable' : 'Live connection'}<small>Robinhood Chain · {CHAIN.id}</small></div><a href="https://github.com/Crypto-hansolo/HOODL-Analytics" target="_blank" rel="noreferrer">GitHub repository ↗</a></div></aside><main><header><div><span className="breadcrumb">HOODL / <b>{tab.toUpperCase()}</b></span><h2>{tab === 'Overview' ? 'Token intelligence, without the noise.' : tab}</h2></div><div className="header-actions"><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'RPC ERROR' : 'READ-ONLY'}</Badge><button className="refresh" onClick={() => void load()}>↻ Refresh</button></div></header><div className="content"><TabContent tab={tab} token={token} chain={chain} /></div><footer><span>HOODL ANALYTICS · DATA INTEGRITY FIRST</span><span>Last refresh {new Date(updated).toLocaleTimeString()}</span></footer></main></div>
+  return <div className="app-shell"><aside><div className="brand"><span className="brand-mark">H</span><span>HOODL <small>TERMINAL</small></span></div><div className="side-label">ANALYTICS</div><nav>{tabs.map(item => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}><span className="nav-icon">{['◈', '⌁', '◌', '◇', '◎'][tabs.indexOf(item)]}</span>{item}</button>)}</nav><div className="side-bottom"><div className="connection"><i className={stale || chain.error ? 'offline' : ''} />{stale || chain.error ? 'RPC unavailable' : 'Live connection'}<small>Robinhood Chain · {CHAIN.id}</small></div><a href="https://github.com/Crypto-hansolo/HOODL-Analytics" target="_blank" rel="noreferrer">GitHub repository ↗</a></div></aside><main><header><div><span className="breadcrumb">HOODL / <b>{tab.toUpperCase()}</b></span><h2>{tab === 'Overview' ? 'Token intelligence, without the noise.' : tab}</h2></div><div className="header-actions"><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'RPC ERROR' : 'READ-ONLY'}</Badge><button className="refresh" onClick={() => void load()}>↻ Refresh</button></div></header><div className="content"><TabContent tab={tab} token={token} chain={chain} poolV3={poolV3} /></div><footer><span>HOODL ANALYTICS · DATA INTEGRITY FIRST</span><span>Last refresh {new Date(updated).toLocaleTimeString()}</span></footer></main></div>
 }
 
 export default App

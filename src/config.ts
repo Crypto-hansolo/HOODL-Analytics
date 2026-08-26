@@ -17,14 +17,16 @@ export const HOODL_TOKEN = {
   symbol: 'HOODL',
 } as const
 
-// A pool address was supplied for this dashboard, but its DEX protocol, pair
-// composition, ABI, fee tier, and rewards mechanics have NOT been verified.
-// We only ever display facts we can read directly (token/native balances of
-// this address) and we label everything else as unverified. We never guess
-// at or fabricate AMM reserves, prices, fees, or reward mechanics for it.
+// Pool identity (address, pair, protocol) is configured/known ground truth.
+// Its on-chain mechanics (token0/token1 order, fee tier, tick, liquidity,
+// reserves, price, TVL, volume, rewards) are NOT assumed — every such value
+// is read live via read-only eth_call against the pool contract's Uniswap V3
+// interface and is marked "Unavailable" rather than guessed if the call
+// fails (RPC error, revert, timeout, or CORS block).
 export const CONFIGURED_POOL = {
   address: '0xF87761231646DA4aa00905c237EaCbfF112Df930',
-  verified: false,
+  pair: 'HOODL/WETH',
+  poolType: 'Uniswap V3',
 } as const
 
 // Background refresh interval for live data, in milliseconds.
