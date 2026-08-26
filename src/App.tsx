@@ -6,13 +6,14 @@ import { erc20BalanceOf, erc20Decimals, erc20Name, erc20Symbol, erc20TotalSupply
 import { ethBlockNumber, ethChainId, ethGetCode, RpcError } from './lib/rpc'
 import { formatCompactUnits, formatInteger, formatUnits, isValidAddress, truncateAddress } from './lib/format'
 import { fetchPoolV3Data } from './lib/uniswapV3'
-import { getTokenInfo, getTokenTransfers } from './lib/blockscout'
+import { getTokenHolders, getTokenInfo, getTokenTransfers } from './lib/blockscout'
 import type { PoolSpotQuote, PoolV3Data, PoolV3Field } from './lib/uniswapV3'
+import type { BlockscoutHolder } from './lib/blockscout'
 
 type Tab = 'Overview' | 'Trading' | 'Fees & Rewards' | 'Pools' | 'Holders'
 type ChainState = { chainId: number | null; block: bigint | null; deployed: boolean | null; error: string | null }
 type TokenState = { name: string | null; symbol: string | null; decimals: number | null; supply: bigint | null; error: string | null }
-type IndexedState = { holders: number | null; priceUsd: string | null; volume24h: string | null; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; snapshotAt: string | null; error: string | null }
+type IndexedState = { holders: number | null; priceUsd: string | null; volume24h: string | null; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; holderRows: BlockscoutHolder[]; snapshotAt: string | null; error: string | null }
 
 type Snapshot = { generatedAt: string; transfers: Awaited<ReturnType<typeof getTokenTransfers>> }
 
@@ -122,16 +123,30 @@ function PoolsTab({ poolV3, quote }: { poolV3: PoolV3Data | null; quote: PoolSpo
   </>
 }
 
+function HoldersTab({ indexed, token }: { indexed: IndexedState; token: TokenState }) {
+  const rows = indexed.holderRows
+  const topTen = rows.slice(0, 10)
+  const topTenBalance = topTen.reduce((sum, row) => sum + BigInt(row.value), 0n)
+  const concentration = token.supply && token.supply > 0n
+    ? `${(Number(topTenBalance * 10_000n / token.supply) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+    : '—'
+  return <>
+    <div className="metrics"><Metric label="Current holders" value={indexed.holders !== null ? formatInteger(indexed.holders) : '—'} source={indexed.holders !== null ? 'Blockscout' : 'Unavailable'} /><Metric label="Ranking rows" value={rows.length ? formatInteger(rows.length) : '—'} source={rows.length ? 'Blockscout' : 'Unavailable'} /><Metric label="Top 10 concentration" value={concentration} source={rows.length && token.supply ? 'Calculated' : 'Unavailable'} /><Metric label="WETH earned" value="—" /></div>
+    <WalletLookup />
+    {rows.length ? <section className="panel holder-table-panel"><div className="panel-head"><div><h2>Holder ranking</h2><p>Top {rows.length} rows returned by Blockscout · latest indexed state</p></div><Badge tone="live">INDEXED</Badge></div><div className="holder-table" role="table" aria-label="Holder ranking"><div className="holder-row holder-head" role="row"><span>Rank</span><span>Address</span><span>Balance</span><span>Share</span></div>{rows.map((row, index) => { const balance = BigInt(row.value); const share = token.supply && token.supply > 0n ? `${(Number(balance * 10_000n / token.supply) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%` : '—'; return <div className="holder-row" role="row" key={row.address}><span>{index + 1}</span><a href={`${CHAIN.explorerUrl}/address/${row.address}`} target="_blank" rel="noreferrer">{truncateAddress(row.address)} ↗</a><span>{token.decimals !== null ? formatUnits(balance, token.decimals) : '—'} HOODL</span><span>{share}</span></div> })}</div><div className="source-note">Concentration is calculated from the first 10 rows returned by Blockscout divided by the on-chain total supply. It is not a claim about undisclosed holders or a complete historical distribution.</div></section> : <EmptyState title="Holder ranking unavailable" body="Blockscout did not return a verified holder dataset." todo="Retry the public holder endpoint or provide a repository snapshot before calculating ranking and concentration." />}
+  </>
+}
+
 function TabContent({ tab, token, chain, poolV3, quote, indexed }: { tab: Tab; token: TokenState; chain: ChainState; poolV3: PoolV3Data | null; quote: PoolSpotQuote | null; indexed: IndexedState }) {
   if (tab === 'Overview') return <Overview token={token} chain={chain} indexed={indexed} />
-  if (tab === 'Holders') return <><div className="metrics"><Metric label="Current holders" value={indexed.holders !== null ? formatInteger(indexed.holders) : '—'} source={indexed.holders !== null ? 'Blockscout' : 'Unavailable'} /><Metric label="Holder growth" value="—" /><Metric label="Top 10 concentration" value="—" /><Metric label="WETH earned" value="—" /></div><WalletLookup /><EmptyState title={indexed.holders !== null ? 'Holder ranking unavailable' : 'Holder analytics unavailable'} body={indexed.holders !== null ? `Blockscout reports ${formatInteger(indexed.holders)} holders, but its ranking endpoint did not return a verified dataset.` : 'No verified holder dataset is currently available.'} todo="Provide a working paginated holder endpoint or repository snapshot before calculating ranking and concentration." /></>
+  if (tab === 'Holders') return <HoldersTab indexed={indexed} token={token} />
   if (tab === 'Pools') return <PoolsTab poolV3={poolV3} quote={quote} />
   const title = tab === 'Trading' ? 'Trading analytics' : 'Fees & rewards'
   return <><div className="metrics"><Metric label="Total volume" value="—" /><Metric label={tab === 'Trading' ? 'Buy / sell ratio' : 'Generated fees'} value="—" /><Metric label={tab === 'Trading' ? 'Unique traders' : 'WETH distributed'} value="—" /><Metric label={tab === 'Trading' ? 'Largest trade' : 'Distribution efficiency'} value="—" /></div><Chart title={title} subtitle="Historical values will appear after verified indexing" /><EmptyState title={`${title} data unavailable`} body="No unverified DEX, fee, reward, or volume values are displayed." todo="Connect a verified indexer and document the event semantics before enabling calculations." /></>
 }
 
 function App() {
-  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], snapshotAt: null, error: null }); const [updated, setUpdated] = useState(Date.now()); const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], holderRows: [], snapshotAt: null, error: null }); const [updated, setUpdated] = useState(Date.now()); const [loading, setLoading] = useState(false)
   async function load() {
     setLoading(true)
     try {
@@ -143,8 +158,8 @@ function App() {
       setChain({ chainId, block, deployed: code !== '0x', error: null })
     } catch (err) { setChain(v => ({ ...v, error: err instanceof Error ? err.message : 'RPC unavailable' })) }
     try {
-      const [info, transfers, snapshot] = await Promise.all([getTokenInfo(HOODL_TOKEN.address), getTokenTransfers(HOODL_TOKEN.address, 50), getSnapshot()])
-      setIndexed({ holders: info.holdersCount, priceUsd: info.exchangeRateUsd, volume24h: info.volume24h, transfers: snapshot.transfers.length ? snapshot.transfers : transfers, snapshotAt: snapshot.generatedAt, error: null })
+      const [info, transfers, snapshot, holderRows] = await Promise.all([getTokenInfo(HOODL_TOKEN.address), getTokenTransfers(HOODL_TOKEN.address, 50), getSnapshot(), getTokenHolders(HOODL_TOKEN.address, 25)])
+      setIndexed({ holders: info.holdersCount, priceUsd: info.exchangeRateUsd, volume24h: info.volume24h, transfers: snapshot.transfers.length ? snapshot.transfers : transfers, holderRows, snapshotAt: snapshot.generatedAt, error: null })
     } catch (err) { setIndexed(v => ({ ...v, error: err instanceof Error ? err.message : 'Blockscout unavailable' })) }
     try {
       const livePool = await fetchPoolV3Data(CONFIGURED_POOL.address)
