@@ -46,6 +46,7 @@ export interface BlockscoutTokenInfo {
   totalSupply: string | null
   holdersCount: number | null
   exchangeRateUsd: string | null
+  volume24h: string | null
 }
 
 export async function getTokenInfo(address: string): Promise<BlockscoutTokenInfo> {
@@ -57,6 +58,7 @@ export async function getTokenInfo(address: string): Promise<BlockscoutTokenInfo
     holders?: string | number | null
     holders_count?: string | number | null
     exchange_rate?: string | null
+    volume_24h?: string | null
   }>(`/tokens/${address}`)
   const holders = raw.holders_count ?? raw.holders
   return {
@@ -66,6 +68,7 @@ export async function getTokenInfo(address: string): Promise<BlockscoutTokenInfo
     totalSupply: raw.total_supply ?? null,
     holdersCount: holders != null ? Number(holders) : null,
     exchangeRateUsd: raw.exchange_rate ?? null,
+    volume24h: raw.volume_24h ?? null,
   }
 }
 
