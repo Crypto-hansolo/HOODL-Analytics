@@ -16,7 +16,7 @@ type ChainState = { chainId: number | null; block: bigint | null; deployed: bool
 type TokenState = { name: string | null; symbol: string | null; decimals: number | null; supply: bigint | null; error: string | null }
 type ActivityCounts = { transfers1h: number; transfers24h: number; transfers7d: number }
 type SnapshotCoverage = { coverageComplete7d?: boolean; pagesFetched?: number; oldestTransferAt?: string | null; note?: string }
-type IndexedState = { holders: number | null; priceUsd: string | null; volume24h: string | null; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; activity: ActivityCounts | null; holderRows: BlockscoutHolder[]; snapshotAt: string | null; snapshotStale: boolean; coverage: SnapshotCoverage | null; error: string | null }
+type IndexedState = { holders: number | null; priceUsd: string | null; volume24h: string | null; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; activity: ActivityCounts | null; holderRows: BlockscoutHolder[]; snapshotAt: string | null; snapshotStale: boolean; transfersStale: boolean; coverage: SnapshotCoverage | null; error: string | null }
 
 type Snapshot = { generatedAt: string; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; activity?: ActivityCounts; coverage?: SnapshotCoverage }
 
@@ -154,13 +154,13 @@ function TabContent({ tab, token, chain, poolV3, quote, indexed }: { tab: Tab; t
   if (tab === 'Overview') return <Overview token={token} chain={chain} indexed={indexed} />
   if (tab === 'Holders') return <HoldersTab indexed={indexed} token={token} />
   if (tab === 'Pools') return <PoolsTab poolV3={poolV3} quote={quote} />
-  if (tab === 'Trading') return <><div className="metrics"><Metric label="Verified transfers" value={indexed.transfers.length ? formatInteger(indexed.transfers.length) : '—'} source={indexed.transfers.length ? 'Blockscout' : 'Unavailable'} error={indexed.transfers.length ? null : indexed.error} /><Metric label="24h activity" value={indexed.activity ? formatInteger(indexed.activity.transfers24h) : '—'} source={indexed.activity ? 'Calculated' : 'Unavailable'} error={indexed.activity ? null : indexed.error} /><Metric label="Total volume" value="—" /><Metric label="Unique traders" value="—" /></div><Chart title="Transfer activity" subtitle="Verified token transfers · bounded source coverage" activity={indexed.activity} /><TransferActivity transfers={indexed.transfers} decimals={token.decimals} stale={indexed.snapshotStale} error={indexed.error} /></>
+  if (tab === 'Trading') return <><div className="metrics"><Metric label="Verified transfers" value={indexed.transfers.length ? formatInteger(indexed.transfers.length) : '—'} source={indexed.transfers.length ? 'Blockscout' : 'Unavailable'} error={indexed.transfers.length ? null : indexed.error} /><Metric label="24h activity" value={indexed.activity ? formatInteger(indexed.activity.transfers24h) : '—'} source={indexed.activity ? 'Calculated' : 'Unavailable'} error={indexed.activity ? null : indexed.error} /><Metric label="Total volume" value="—" /><Metric label="Unique traders" value="—" /></div><Chart title="Transfer activity" subtitle="Verified token transfers · bounded source coverage" activity={indexed.activity} /><TransferActivity transfers={indexed.transfers} decimals={token.decimals} stale={indexed.transfersStale} error={indexed.error} /></>
   const title = 'Fees & rewards'
   return <><div className="metrics"><Metric label="Total volume" value="—" /><Metric label="Generated fees" value="—" /><Metric label="WETH distributed" value="—" /><Metric label="Distribution efficiency" value="—" /></div><Chart title={title} subtitle="Historical values will appear after verified indexing" /><EmptyState title={`${title} data unavailable`} body="No unverified DEX, fee, reward, or volume values are displayed." todo="Connect a verified pool-event indexer and document the event semantics before enabling calculations." /></>
 }
 
 function App() {
-  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, holderRows: [], snapshotAt: null, snapshotStale: false, coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
   async function load() {
     setLoading(true)
     try {
@@ -180,8 +180,12 @@ function App() {
       const holderRows = holdersResult.status === 'fulfilled' ? holdersResult.value : []
       const snapshotAt = snapshot?.generatedAt ?? null
       const snapshotStale = snapshotAt !== null && Date.now() - new Date(snapshotAt).getTime() > STALE_AFTER_MS
+      const usingLiveTransfers = liveTransfers.length > 0
+      // Staleness describes the repository snapshot file, not live data — only apply it
+      // to the transfer rows when those rows actually came from the snapshot fallback.
+      const transfersStale = !usingLiveTransfers && snapshotStale
       const failures = results.filter((result) => result.status === 'rejected')
-      setIndexed({ holders: info?.holdersCount ?? null, priceUsd: info?.exchangeRateUsd ?? null, volume24h: info?.volume24h ?? null, transfers: liveTransfers.length ? liveTransfers : snapshot?.transfers ?? [], activity: snapshot?.activity ?? null, holderRows, snapshotAt, snapshotStale, coverage: snapshot?.coverage ?? null, error: failures.length ? `${failures.length} indexed source${failures.length === 1 ? '' : 's'} unavailable` : null })
+      setIndexed({ holders: info?.holdersCount ?? null, priceUsd: info?.exchangeRateUsd ?? null, volume24h: info?.volume24h ?? null, transfers: usingLiveTransfers ? liveTransfers : snapshot?.transfers ?? [], activity: snapshot?.activity ?? null, holderRows, snapshotAt, snapshotStale, transfersStale, coverage: snapshot?.coverage ?? null, error: failures.length ? `${failures.length} indexed source${failures.length === 1 ? '' : 's'} unavailable` : null })
     } catch (err) { setIndexed(v => ({ ...v, error: err instanceof Error ? err.message : 'Blockscout unavailable' })) }
     try {
       const livePool = await fetchPoolV3Data(CONFIGURED_POOL.address)
