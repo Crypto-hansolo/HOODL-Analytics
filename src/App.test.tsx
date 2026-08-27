@@ -87,14 +87,28 @@ function rpcResult(method: string, params: unknown[]): unknown {
   }
 }
 
+// Mirrors the real chain: Blockscout has no exchange_rate for the long-tail
+// HOODL token itself, only for well-known tokens like WETH (see
+// wethTokenInfoPayload below) — this is what forces Overview onto the
+// on-chain-derived USD fallback.
 const tokenInfoPayload = {
   name: 'Hoodl The Fox',
   symbol: 'HOODL',
   decimals: '9',
   total_supply: '1000000000000000000',
   holders_count: 42,
-  exchange_rate: '0.01',
+  exchange_rate: null,
   volume_24h: '1234.56',
+}
+
+const wethTokenInfoPayload = {
+  name: 'Wrapped Ether',
+  symbol: 'WETH',
+  decimals: '18',
+  total_supply: '1000000000000000000000',
+  holders_count: 500000,
+  exchange_rate: '2500.5',
+  volume_24h: null,
 }
 
 const transfersPayload = {
@@ -138,6 +152,7 @@ function mockFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respon
   }
   if (url.includes('/holders')) return Promise.resolve(jsonResponse(holdersPayload))
   if (url.includes('/transfers')) return Promise.resolve(jsonResponse(transfersPayload))
+  if (url.toLowerCase() === `${CHAIN.blockscoutApiBase}/tokens/${WETH_ADDRESS}`.toLowerCase()) return Promise.resolve(jsonResponse(wethTokenInfoPayload))
   if (url.includes(`${CHAIN.blockscoutApiBase}/tokens/`)) return Promise.resolve(jsonResponse(tokenInfoPayload))
   if (url.endsWith('data/snapshot.json')) return Promise.resolve(jsonResponse(snapshotPayload))
   return Promise.reject(new Error(`Unexpected fetch to ${url}`))
@@ -165,6 +180,16 @@ describe('App', () => {
     // Total supply (1_000_000_000 HOODL at 9 decimals) formatted compactly.
     expect(screen.getByText('1.00B')).toBeTruthy()
     expect(screen.queryByText(/Connecting to Robinhood Chain/i)).toBeNull()
+
+    // The on-chain WETH/HOODL spot quote must render a real value on
+    // Overview even though Blockscout has no exchange_rate for HOODL itself
+    // (mocked as null above, matching the real chain).
+    expect(await screen.findByText('Spot price (WETH)')).toBeTruthy()
+    expect(screen.getByText('0.000000001')).toBeTruthy()
+    // USD falls back to on-chain spot × Blockscout's WETH exchange rate,
+    // clearly labeled as derived rather than HOODL's own indexed price.
+    expect(screen.getByText(/^\$0\.0000025005/)).toBeTruthy()
+    expect(screen.getByText(/Blockscout WETH\/USD exchange rate/)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /Holders/i }))
     expect(screen.getByText('Wallet lookup')).toBeTruthy()

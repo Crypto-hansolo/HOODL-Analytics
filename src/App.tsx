@@ -20,6 +20,11 @@ import type { IndexedState, Snapshot } from './lib/mergeIndexedState'
 type Tab = 'Overview' | 'Trading' | 'Fees & Rewards' | 'Pools' | 'Holders'
 type ChainState = { chainId: number | null; block: bigint | null; deployed: boolean | null; error: string | null }
 type TokenState = { name: string | null; symbol: string | null; decimals: number | null; supply: bigint | null; error: string | null }
+// USD is never a primary field here — it is derived from the verified on-chain
+// WETH/HOODL spot quote multiplied by Blockscout's own indexed exchange rate
+// for whichever pool token is actually WETH (identified dynamically, never
+// assumed). No third-party price API is used.
+type WethPriceState = { usd: number | null; error: string | null }
 
 async function getSnapshot(): Promise<Snapshot> {
   // The snapshot is polled on the same 30s loop as live RPC/Blockscout
@@ -43,17 +48,47 @@ function Dot({ tone }: { tone: DotTone }) {
   return <i className={`dot ${tone}`} />
 }
 
+// Purely decorative token-orbit graphic for the network status card — an
+// inline, dependency-free SVG (no external image/CDN) so it stays fast and
+// themeable. aria-hidden since it conveys no information the text beside it
+// doesn't already state; rotation is CSS-driven and disabled under
+// prefers-reduced-motion (see App.css).
+function HeroOrbit() {
+  return (
+    <svg className="hero-orbit-svg" viewBox="0 0 220 220" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="orbitGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#83f0b2" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="#83f0b2" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="110" cy="110" r="92" fill="url(#orbitGlow)" />
+      <circle className="orbit-ring orbit-ring-outer" cx="110" cy="110" r="86" />
+      <circle className="orbit-ring orbit-ring-mid" cx="110" cy="110" r="58" />
+      <circle className="orbit-ring orbit-ring-inner" cx="110" cy="110" r="32" />
+      <g className="orbit-spin">
+        <circle className="orbit-node orbit-node-a" cx="110" cy="24" r="3.4" />
+        <circle className="orbit-node orbit-node-b" cx="196" cy="110" r="2.4" />
+      </g>
+      <g className="orbit-spin orbit-spin-reverse">
+        <circle className="orbit-node orbit-node-c" cx="110" cy="52" r="2.4" />
+      </g>
+    </svg>
+  )
+}
+
 function sourceLabel(source: 'live' | 'snapshot' | 'unavailable'): string {
   return source === 'live' ? 'live' : source === 'snapshot' ? 'snapshot fallback' : 'unavailable'
 }
 
 type MetricSource = 'On-chain' | 'Indexed' | 'Calculated' | 'Unavailable'
 
-function Metric({ label, value, source = 'Unavailable', accent = false, error }: { label: string; value: string; source?: MetricSource; accent?: boolean; error?: string | null }) {
+function Metric({ label, value, source = 'Unavailable', accent = false, error, subtext: subtextOverride, tooltip }: { label: string; value: string; source?: MetricSource; accent?: boolean; error?: string | null; subtext?: string; tooltip?: string }) {
   const isUnavailable = source === 'Unavailable'
-  const subtext = isUnavailable ? error ?? unavailable : 'Read from Robinhood Chain'
+  const subtext = subtextOverride ?? (isUnavailable ? error ?? unavailable : 'Read from Robinhood Chain')
   const tone = source === 'On-chain' ? 'live' : source === 'Calculated' ? 'calc' : source === 'Unavailable' ? 'muted' : 'live'
-  return <article className="metric" title={isUnavailable && error ? error : undefined}><div className="metric-top"><span>{label}</span><Badge tone={tone}>{source}</Badge></div><strong className={accent ? 'accent' : ''}>{value}</strong><small>{subtext}</small></article>
+  const title = tooltip ?? (isUnavailable && error ? error : undefined)
+  return <article className="metric" title={title}><div className="metric-top"><span>{label}</span><Badge tone={tone}>{source}</Badge></div><strong className={accent ? 'accent' : ''}>{value}</strong><small>{subtext}</small></article>
 }
 
 function LoadingBanner({ loading, updated }: { loading: boolean; updated: number }) {
@@ -72,6 +107,11 @@ function formatFeeTier(fee: number): string {
 function formatSpotQuote(quote: PoolSpotQuote | null): string {
   if (!quote || quote.status !== 'on-chain' || quote.wethPerHoodl === null || !Number.isFinite(quote.wethPerHoodl)) return '—'
   return quote.wethPerHoodl.toLocaleString('en-US', { maximumSignificantDigits: 8 })
+}
+
+function formatUsdMicro(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '—'
+  return `$${value.toLocaleString('en-US', { maximumSignificantDigits: 6, minimumSignificantDigits: 2 })}`
 }
 
 function swapVolume(swaps: PoolSwap[], pool: PoolV3Data | null, decimals: number | null): string {
@@ -171,10 +211,27 @@ function DataIntegrityPanel({ token, chain, indexed }: { token: TokenState; chai
   )
 }
 
-function Overview({ token, chain, indexed, updated }: { token: TokenState; chain: ChainState; indexed: IndexedState; updated: number }) {
+function Overview({ token, chain, indexed, updated, quote, wethPrice }: { token: TokenState; chain: ChainState; indexed: IndexedState; updated: number; quote: PoolSpotQuote | null; wethPrice: WethPriceState }) {
+  const wethPerHoodl = quote?.status === 'on-chain' ? quote.wethPerHoodl : null
+  const calculatedUsd = wethPerHoodl !== null && wethPrice.usd !== null ? wethPerHoodl * wethPrice.usd : null
+  const usdValue = indexed.priceUsd ? `$${indexed.priceUsd}` : calculatedUsd !== null ? formatUsdMicro(calculatedUsd) : '—'
+  const usdSource: MetricSource = indexed.priceUsd ? 'Indexed' : calculatedUsd !== null ? 'Calculated' : 'Unavailable'
+  const usdSubtext = indexed.priceUsd
+    ? 'Blockscout exchange rate'
+    : calculatedUsd !== null
+      ? `On-chain WETH/HOODL spot × Blockscout WETH/USD exchange rate`
+      : undefined
+  const usdError = indexed.priceUsd || calculatedUsd !== null
+    ? null
+    : wethPerHoodl === null
+      ? (quote?.error ?? 'On-chain pool quote unavailable')
+      : (wethPrice.error ?? 'Blockscout WETH/USD exchange rate unavailable')
+  const usdTooltip = calculatedUsd !== null && !indexed.priceUsd
+    ? `Derived: ${formatSpotQuote(quote)} WETH/HOODL × $${wethPrice.usd?.toLocaleString('en-US')} WETH/USD (Blockscout indexed rate for the pool's WETH token). Not HOODL's own indexed price.`
+    : undefined
   return <>
-    <div className="hero-grid"><div className="hero-copy"><Badge tone="live">READ-ONLY TERMINAL</Badge><h1>Understand the<br /><em>HOODL economy.</em></h1><p>Track trading activity, liquidity, and WETH distributions on Robinhood Chain — with every metric sourced, timestamped, and honest.</p><div className="hero-links"><a href={`${CHAIN.explorerUrl}/token/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">View token on Blockscout ↗</a><span>·</span><span>Chain {CHAIN.id}</span></div></div><div className="network-card"><div className="network-orbit"><span>H</span></div><div><span className="eyebrow">NETWORK STATUS</span><h3>{CHAIN.name}</h3><Badge tone={chain.error || (chain.chainId !== null && chain.chainId !== CHAIN.id) ? 'warn' : chain.chainId === CHAIN.id ? 'live' : 'muted'}>{chain.error ? 'RPC unavailable' : chain.chainId === null ? 'Awaiting RPC' : chain.chainId !== CHAIN.id ? 'Wrong network' : 'Read-only connected'}</Badge></div><div className="network-meta"><span>Chain ID <b>{chain.chainId ?? '—'}</b></span><span>Latest block <b>{chain.block ? formatInteger(Number(chain.block)) : '—'}</b></span></div></div></div>
-    <div className="metrics"><Metric label="Token name" value={token.name ?? '—'} source={token.name ? 'On-chain' : 'Unavailable'} error={token.name ? null : token.error} accent /><Metric label="Symbol" value={token.symbol ?? '—'} source={token.symbol ? 'On-chain' : 'Unavailable'} error={token.symbol ? null : token.error} /><Metric label="Total supply" value={token.supply !== null && token.decimals !== null ? formatCompactUnits(token.supply, token.decimals) : '—'} source={token.supply !== null ? 'Calculated' : 'Unavailable'} error={token.supply !== null ? null : token.error} /><Metric label="Price (USD)" value={indexed.priceUsd ?? '—'} source={indexed.priceUsd ? 'Indexed' : 'Unavailable'} error={indexed.priceUsd ? null : indexed.error} /><Metric label="24h volume" value={indexed.volume24h ?? '—'} source={indexed.volume24h ? 'Indexed' : 'Unavailable'} error={indexed.volume24h ? null : indexed.error} /><Metric label="Holders" value={indexed.holders !== null ? formatInteger(indexed.holders) : '—'} source={indexed.holders !== null ? 'Indexed' : 'Unavailable'} error={indexed.holders !== null ? null : indexed.error} /></div>
+    <div className="hero-grid"><div className="hero-copy"><Badge tone="live">READ-ONLY TERMINAL</Badge><h1>Understand the<br /><em>HOODL economy.</em></h1><p>Track trading activity, liquidity, and WETH distributions on Robinhood Chain — with every metric sourced, timestamped, and honest.</p><div className="hero-links"><a href={`${CHAIN.explorerUrl}/token/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">View token on Blockscout ↗</a><span>·</span><span>Chain {CHAIN.id}</span></div></div><div className="network-card"><HeroOrbit /><div className="network-orbit"><span>H</span></div><div><span className="eyebrow">NETWORK STATUS</span><h3>{CHAIN.name}</h3><Badge tone={chain.error || (chain.chainId !== null && chain.chainId !== CHAIN.id) ? 'warn' : chain.chainId === CHAIN.id ? 'live' : 'muted'}>{chain.error ? 'RPC unavailable' : chain.chainId === null ? 'Awaiting RPC' : chain.chainId !== CHAIN.id ? 'Wrong network' : 'Read-only connected'}</Badge></div><div className="network-meta"><span>Chain ID <b>{chain.chainId ?? '—'}</b></span><span>Latest block <b>{chain.block ? formatInteger(Number(chain.block)) : '—'}</b></span></div></div></div>
+    <div className="metrics"><Metric label="Token name" value={token.name ?? '—'} source={token.name ? 'On-chain' : 'Unavailable'} error={token.name ? null : token.error} accent /><Metric label="Symbol" value={token.symbol ?? '—'} source={token.symbol ? 'On-chain' : 'Unavailable'} error={token.symbol ? null : token.error} /><Metric label="Total supply" value={token.supply !== null && token.decimals !== null ? formatCompactUnits(token.supply, token.decimals) : '—'} source={token.supply !== null ? 'Calculated' : 'Unavailable'} error={token.supply !== null ? null : token.error} /><Metric label="Spot price (WETH)" value={formatSpotQuote(quote)} source={wethPerHoodl !== null ? 'Calculated' : 'Unavailable'} error={wethPerHoodl !== null ? null : (quote?.error ?? 'Uniswap V3 pool quote unavailable')} subtext={wethPerHoodl !== null ? 'Verified pool sqrtPriceX96 · Uniswap V3' : undefined} accent /><Metric label="Price (USD)" value={usdValue} source={usdSource} error={usdError} subtext={usdSubtext} tooltip={usdTooltip} /><Metric label="24h volume" value={indexed.volume24h ?? '—'} source={indexed.volume24h ? 'Indexed' : 'Unavailable'} error={indexed.volume24h ? null : indexed.error} /><Metric label="Holders" value={indexed.holders !== null ? formatInteger(indexed.holders) : '—'} source={indexed.holders !== null ? 'Indexed' : 'Unavailable'} error={indexed.holders !== null ? null : indexed.error} /></div>
     <div className="two-col"><Chart title="Transfer activity" subtitle={`Verified token transfers · paginated snapshot${indexed.snapshotStale ? ' · stale' : ''}`} activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><DataIntegrityPanel token={token} chain={chain} indexed={indexed} /></div>
     <div className="two-col"><section className="panel contract-panel"><div className="panel-head"><div><h2>Contracts</h2><p>Centralized, clickable configuration</p></div></div><div className="address-row"><span><label>HOODL TOKEN</label><code>{HOODL_TOKEN.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer" aria-label="View HOODL token address on explorer">↗</a></div><div className="address-row"><span><label>{CONFIGURED_POOL.poolType.toUpperCase()} POOL · {CONFIGURED_POOL.pair}</label><code>{CONFIGURED_POOL.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${CONFIGURED_POOL.address}`} target="_blank" rel="noreferrer" aria-label={`View ${CONFIGURED_POOL.pair} pool address on explorer`}>↗</a></div></section><section className="panel block-panel"><div className="panel-head"><div><h2>On-chain snapshot</h2><p>Freshness is shown, never implied</p></div><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'STALE' : 'LIVE'}</Badge></div><div className="snapshot"><span>Last updated <b>{updated ? new Date(updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</b></span><span>Contract deployed <b>{chain.deployed === null ? '—' : chain.deployed ? 'Yes' : 'No'}</b></span><span>Decimals <b>{token.decimals ?? '—'}</b></span></div></section></div>
   </>
@@ -241,8 +298,8 @@ function TransferActivity({ transfers, decimals, stale, error, onRetry, retrying
   return <section className="panel transfer-panel"><div className="panel-head"><div><h2>Recent token transfers</h2><p>Verified HOODL ERC-20 transfers · {stale ? 'snapshot may be stale' : 'live endpoint or repository snapshot'}</p></div><Badge tone={stale ? 'warn' : 'live'}>{stale ? 'STALE' : 'INDEXED'}</Badge></div><div className="transfer-table" role="table" aria-label="Recent HOODL token transfers"><div className="transfer-row transfer-head" role="row"><span>Time</span><span>From → To</span><span>Amount</span><span>Block</span></div>{transfers.map((transfer, index) => <div className="transfer-row" role="row" key={`${transfer.hash}-${transfer.from}-${transfer.to}-${index}`}><span>{transfer.timestamp ? new Date(transfer.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}</span><span className="transfer-route"><a href={`${CHAIN.explorerUrl}/address/${transfer.from}`} target="_blank" rel="noreferrer">{truncateAddress(transfer.from)}</a><b>→</b><a href={`${CHAIN.explorerUrl}/address/${transfer.to}`} target="_blank" rel="noreferrer">{truncateAddress(transfer.to)}</a><a className="tx-link" href={`${CHAIN.explorerUrl}/tx/${transfer.hash}`} target="_blank" rel="noreferrer">tx ↗</a></span><span className="transfer-amount">{decimals !== null ? formatUnits(BigInt(transfer.value), decimals) : '—'} HOODL</span><span>{transfer.blockNumber !== null ? formatInteger(transfer.blockNumber) : '—'}</span></div>)}</div><div className="source-note">Rows are token transfers, not swaps. Amounts are formatted from the on-chain token units; no trading volume or fee value is inferred. Source failures are shown as unavailable rather than replaced with estimates.</div></section>
 }
 
-function TabContent({ tab, token, chain, poolV3, quote, swaps, indexed, updated, onRetry, retrying }: { tab: Tab; token: TokenState; chain: ChainState; poolV3: PoolV3Data | null; quote: PoolSpotQuote | null; swaps: PoolSwap[]; indexed: IndexedState; updated: number; onRetry: () => void; retrying: boolean }) {
-  if (tab === 'Overview') return <Overview token={token} chain={chain} indexed={indexed} updated={updated} />
+function TabContent({ tab, token, chain, poolV3, quote, swaps, indexed, updated, onRetry, retrying, wethPrice }: { tab: Tab; token: TokenState; chain: ChainState; poolV3: PoolV3Data | null; quote: PoolSpotQuote | null; swaps: PoolSwap[]; indexed: IndexedState; updated: number; onRetry: () => void; retrying: boolean; wethPrice: WethPriceState }) {
+  if (tab === 'Overview') return <Overview token={token} chain={chain} indexed={indexed} updated={updated} quote={quote} wethPrice={wethPrice} />
   if (tab === 'Holders') return <HoldersTab indexed={indexed} token={token} onRetry={onRetry} retrying={retrying} />
   if (tab === 'Pools') return <PoolsTab poolV3={poolV3} quote={quote} swaps={swaps} decimals={token.decimals} onRetry={onRetry} retrying={retrying} />
   if (tab === 'Trading') {
@@ -263,7 +320,7 @@ function TabContent({ tab, token, chain, poolV3, quote, swaps, indexed, updated,
 }
 
 function App() {
-  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [swaps, setSwaps] = useState<PoolSwap[]>([]); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, transfersSource: 'unavailable', holdersSource: 'unavailable', coverage: null, error: null, swapActivity: null, swapsSource: 'unavailable', swapIndexing: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [swaps, setSwaps] = useState<PoolSwap[]>([]); const [wethPrice, setWethPrice] = useState<WethPriceState>({ usd: null, error: null }); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, transfersSource: 'unavailable', holdersSource: 'unavailable', coverage: null, error: null, swapActivity: null, swapsSource: 'unavailable', swapIndexing: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   async function load() {
     if (loadingRef.current) return
@@ -300,7 +357,24 @@ function App() {
       if (livePool.token0.status !== 'on-chain' || livePool.token1.status !== 'on-chain' || livePool.slot0.status !== 'on-chain' || !token0 || !token1 || !slot0) throw new Error('Pool identity or slot0 unavailable')
       const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([erc20Symbol(token0), erc20Symbol(token1), erc20Decimals(token0), erc20Decimals(token1)])
       setQuote(computeSpotQuote({ poolV3: livePool, hoodlAddress: HOODL_TOKEN.address, symbol0, symbol1, decimals0, decimals1 }))
-    } catch (err) { setQuote({ status: 'unavailable', wethPerHoodl: null, token0Symbol: null, token1Symbol: null, error: err instanceof Error ? err.message : 'Pool quote unavailable' }) }
+      // Which pool token is WETH is identified from the verified symbol() reads
+      // above, never assumed — then its own Blockscout-indexed USD exchange
+      // rate (a source this app already trusts) is used to convert the
+      // verified on-chain spot quote into an approximate USD figure.
+      const wethAddress = symbol0?.toUpperCase() === 'WETH' ? token0 : symbol1?.toUpperCase() === 'WETH' ? token1 : null
+      if (wethAddress) {
+        try {
+          const wethInfo = await getTokenInfo(wethAddress)
+          const usd = wethInfo.exchangeRateUsd !== null ? Number.parseFloat(wethInfo.exchangeRateUsd) : NaN
+          setWethPrice(Number.isFinite(usd) && usd > 0 ? { usd, error: null } : { usd: null, error: 'Blockscout returned no WETH exchange rate' })
+        } catch (err) { setWethPrice({ usd: null, error: err instanceof Error ? err.message : 'Blockscout WETH price lookup failed' }) }
+      } else {
+        setWethPrice({ usd: null, error: 'Pool token is not verified as WETH' })
+      }
+    } catch (err) {
+      setQuote({ status: 'unavailable', wethPerHoodl: null, token0Symbol: null, token1Symbol: null, error: err instanceof Error ? err.message : 'Pool quote unavailable' })
+      setWethPrice({ usd: null, error: 'On-chain pool quote unavailable' })
+    }
     setUpdated(successfulSourceGroups > 0 ? Date.now() : 0)
     setLoading(false)
     loadingRef.current = false
@@ -309,7 +383,7 @@ function App() {
   const stale = updated === 0 || now - updated > STALE_AFTER_MS
   const chainMatches = chain.chainId === CHAIN.id
   const connectionLabel = loading && updated === 0 ? 'Connecting…' : stale || chain.error || !chainMatches ? 'Check connection' : 'Live connection'
-  return <div className="app-shell"><aside><div className="brand"><span className="brand-mark">H</span><span>HOODL <small>TERMINAL</small></span></div><div className="side-label">ANALYTICS</div><nav>{tabs.map(item => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}><span className="nav-icon">{['◈', '⌁', '◌', '◇', '◎'][tabs.indexOf(item)]}</span>{item}</button>)}</nav><div className="side-bottom"><div className="connection"><i className={stale || chain.error || !chainMatches ? 'offline' : ''} />{connectionLabel}<small>Robinhood Chain · {CHAIN.id}</small></div><a href="https://github.com/Crypto-hansolo/HOODL-Analytics" target="_blank" rel="noreferrer">GitHub repository ↗</a></div></aside><main><header><div><span className="breadcrumb">HOODL / <b>{tab.toUpperCase()}</b></span><h2>{tab === 'Overview' ? 'Token intelligence, without the noise.' : tab}</h2></div><div className="header-actions"><Badge tone={chain.error || !chainMatches ? 'warn' : 'live'}>{loading && updated === 0 ? 'CONNECTING' : chain.error || !chainMatches ? 'CHECK RPC' : 'READ-ONLY'}</Badge><button className="refresh" disabled={loading} onClick={() => void load()} aria-label="Refresh live data">{loading ? '↻ Updating…' : '↻ Refresh'}</button></div></header><div className="content"><LoadingBanner loading={loading} updated={updated} /><ErrorBoundary key={tab}><TabContent tab={tab} token={token} chain={chain} poolV3={poolV3} quote={quote} swaps={swaps} indexed={indexed} updated={updated} onRetry={() => void load()} retrying={loading} /></ErrorBoundary></div><footer><span>HOODL ANALYTICS · DATA INTEGRITY FIRST</span><span>Last refresh {updated ? new Date(updated).toLocaleTimeString() : 'pending'}</span></footer></main></div>
+  return <div className="app-shell"><aside><div className="brand"><span className="brand-mark">H</span><span>HOODL <small>TERMINAL</small></span></div><div className="side-label">ANALYTICS</div><nav>{tabs.map(item => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}><span className="nav-icon">{['◈', '⌁', '◌', '◇', '◎'][tabs.indexOf(item)]}</span>{item}</button>)}</nav><div className="side-bottom"><div className="connection"><i className={stale || chain.error || !chainMatches ? 'offline' : ''} />{connectionLabel}<small>Robinhood Chain · {CHAIN.id}</small></div><a href="https://github.com/Crypto-hansolo/HOODL-Analytics" target="_blank" rel="noreferrer">GitHub repository ↗</a></div></aside><main><header><div><span className="breadcrumb">HOODL / <b>{tab.toUpperCase()}</b></span><h2>{tab === 'Overview' ? 'Token intelligence, without the noise.' : tab}</h2></div><div className="header-actions"><Badge tone={chain.error || !chainMatches ? 'warn' : 'live'}>{loading && updated === 0 ? 'CONNECTING' : chain.error || !chainMatches ? 'CHECK RPC' : 'READ-ONLY'}</Badge><button className="refresh" disabled={loading} onClick={() => void load()} aria-label="Refresh live data">{loading ? '↻ Updating…' : '↻ Refresh'}</button></div></header><div className="content"><LoadingBanner loading={loading} updated={updated} /><ErrorBoundary key={tab}><TabContent tab={tab} token={token} chain={chain} poolV3={poolV3} quote={quote} swaps={swaps} indexed={indexed} updated={updated} onRetry={() => void load()} retrying={loading} wethPrice={wethPrice} /></ErrorBoundary></div><footer><span>HOODL ANALYTICS · DATA INTEGRITY FIRST</span><span>Last refresh {updated ? new Date(updated).toLocaleTimeString() : 'pending'}</span></footer></main></div>
 }
 
 export default App
