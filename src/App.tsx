@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
-import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, STALE_AFTER_MS } from './config'
+import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, SNAPSHOT_STALE_AFTER_MS, STALE_AFTER_MS } from './config'
 import { erc20BalanceOf, erc20Decimals, erc20Name, erc20Symbol, erc20TotalSupply } from './lib/erc20'
 import { ethBlockNumber, ethChainId, ethGetCode, RpcError } from './lib/rpc'
 import { formatCompactUnits, formatInteger, formatUnits, isValidAddress, truncateAddress } from './lib/format'
@@ -217,7 +217,7 @@ function App() {
       const snapshot = snapshotResult.status === 'fulfilled' ? snapshotResult.value : null
       const holderRows = holdersResult.status === 'fulfilled' ? holdersResult.value : []
       const snapshotAt = snapshot?.generatedAt ?? null
-      const snapshotStale = snapshotAt !== null && Date.now() - new Date(snapshotAt).getTime() > STALE_AFTER_MS
+      const snapshotStale = snapshotAt !== null && Date.now() - new Date(snapshotAt).getTime() > SNAPSHOT_STALE_AFTER_MS
       const usingLiveTransfers = liveTransfers.length > 0
       // Staleness describes the repository snapshot file, not live data — only apply it
       // to the transfer rows when those rows actually came from the snapshot fallback.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, REFRESH_INTERVAL_MS, REQUEST_TIMEOUT_MS, STALE_AFTER_MS } from './config'
+import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, REFRESH_INTERVAL_MS, REQUEST_TIMEOUT_MS, SNAPSHOT_STALE_AFTER_MS, STALE_AFTER_MS } from './config'
 
 // Pins the exact configured facts this dashboard treats as ground truth.
 // A change here is a deliberate config change, not an accidental one.
@@ -27,5 +27,13 @@ describe('config facts', () => {
     expect(REFRESH_INTERVAL_MS).toBe(30_000)
     expect(STALE_AFTER_MS).toBe(90_000)
     expect(REQUEST_TIMEOUT_MS).toBe(10_000)
+  })
+
+  it('sets snapshot staleness to a multiple of the 15-minute snapshot workflow cadence', () => {
+    // The snapshot cron runs every 15 minutes (.github/workflows/snapshot.yml).
+    // The threshold must stay well above that cadence so an on-schedule
+    // snapshot is never mislabeled "stale" moments after a normal refresh.
+    expect(SNAPSHOT_STALE_AFTER_MS).toBe(30 * 60_000)
+    expect(SNAPSHOT_STALE_AFTER_MS).toBeGreaterThan(15 * 60_000)
   })
 })

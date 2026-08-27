@@ -34,7 +34,16 @@ export const REFRESH_INTERVAL_MS = 30_000
 
 // Data older than this is flagged "stale" in the UI while a refresh is
 // in flight, instead of silently showing possibly-outdated numbers as fresh.
+// This is 3x REFRESH_INTERVAL_MS, for the live 30s poll loop only.
 export const STALE_AFTER_MS = 90_000
+
+// The repository snapshot (public/data/snapshot.json) is refreshed by a
+// scheduled workflow every 15 minutes, not every 30s like the live poll
+// loop — reusing STALE_AFTER_MS against it would flag a snapshot as stale
+// seconds after every single refresh. This threshold is 2x the cron
+// interval, giving headroom for scheduler jitter/CI delay before a merely
+// on-cadence snapshot is mislabeled as stale.
+export const SNAPSHOT_STALE_AFTER_MS = 30 * 60_000
 
 // Timeout for any single network request (RPC or REST).
 export const REQUEST_TIMEOUT_MS = 10_000
