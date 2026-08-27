@@ -198,12 +198,15 @@ function App() {
     if (loadingRef.current) return
     loadingRef.current = true
     setLoading(true)
+    let successfulSourceGroups = 0
     try {
       const [name, symbol, decimals, supply] = await Promise.all([erc20Name(HOODL_TOKEN.address), erc20Symbol(HOODL_TOKEN.address), erc20Decimals(HOODL_TOKEN.address), erc20TotalSupply(HOODL_TOKEN.address)])
+      successfulSourceGroups += 1
       setToken({ name, symbol, decimals, supply, error: null })
     } catch (err) { setToken(v => ({ ...v, error: err instanceof Error ? err.message : 'RPC unavailable' })) }
     try {
       const [chainId, block, code] = await Promise.all([ethChainId(), ethBlockNumber(), ethGetCode(HOODL_TOKEN.address)])
+      successfulSourceGroups += 1
       setChain({ chainId, block, deployed: code !== '0x', error: null })
     } catch (err) { setChain(v => ({ ...v, error: err instanceof Error ? err.message : 'RPC unavailable' })) }
     try {
@@ -214,10 +217,12 @@ function App() {
       const snapshot = snapshotResult.status === 'fulfilled' ? snapshotResult.value : null
       const holderRows = holdersResult.status === 'fulfilled' ? holdersResult.value : []
       const failures = results.filter((result) => result.status === 'rejected')
+      if (results.some((result) => result.status === 'fulfilled')) successfulSourceGroups += 1
       setIndexed(mergeIndexedState({ info, liveTransfers, snapshot, holderRows, failureCount: failures.length, now: Date.now(), snapshotStaleAfterMs: SNAPSHOT_STALE_AFTER_MS }))
     } catch (err) { setIndexed(v => ({ ...v, error: err instanceof Error ? err.message : 'Blockscout unavailable' })) }
     try {
       const [livePool, liveSwaps] = await Promise.all([fetchPoolV3Data(CONFIGURED_POOL.address), getRecentPoolSwaps()])
+      successfulSourceGroups += 1
       setPoolV3(livePool)
       setSwaps(liveSwaps)
       const token0 = livePool.token0.value; const token1 = livePool.token1.value; const slot0 = livePool.slot0.value
@@ -225,7 +230,7 @@ function App() {
       const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([erc20Symbol(token0), erc20Symbol(token1), erc20Decimals(token0), erc20Decimals(token1)])
       setQuote(computeSpotQuote({ poolV3: livePool, hoodlAddress: HOODL_TOKEN.address, symbol0, symbol1, decimals0, decimals1 }))
     } catch (err) { setQuote({ status: 'unavailable', wethPerHoodl: null, token0Symbol: null, token1Symbol: null, error: err instanceof Error ? err.message : 'Pool quote unavailable' }) }
-    setUpdated(Date.now())
+    setUpdated(successfulSourceGroups > 0 ? Date.now() : 0)
     setLoading(false)
     loadingRef.current = false
   }
