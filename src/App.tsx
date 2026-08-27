@@ -8,20 +8,17 @@ import { formatCompactUnits, formatInteger, formatUnits, isValidAddress, truncat
 import { computeSpotQuote, fetchPoolV3Data } from './lib/uniswapV3'
 import { getTokenHolders, getTokenInfo, getTokenTransfers } from './lib/blockscout'
 import type { PoolSpotQuote, PoolV3Data, PoolV3Field } from './lib/uniswapV3'
-import type { BlockscoutHolder } from './lib/blockscout'
 import { RANGE_KEYS, selectRange } from './lib/historyRange'
 import type { ActivityCounts, HistoryDay, RangeKey } from './lib/historyRange'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { getRecentPoolSwaps } from './lib/poolSwaps'
 import type { PoolSwap } from './lib/poolSwaps'
+import { mergeIndexedState } from './lib/mergeIndexedState'
+import type { IndexedState, Snapshot } from './lib/mergeIndexedState'
 
 type Tab = 'Overview' | 'Trading' | 'Fees & Rewards' | 'Pools' | 'Holders'
 type ChainState = { chainId: number | null; block: bigint | null; deployed: boolean | null; error: string | null }
 type TokenState = { name: string | null; symbol: string | null; decimals: number | null; supply: bigint | null; error: string | null }
-type SnapshotCoverage = { coverageComplete7d?: boolean; pagesFetched?: number; oldestTransferAt?: string | null; note?: string }
-type IndexedState = { holders: number | null; priceUsd: string | null; volume24h: string | null; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; activity: ActivityCounts | null; history: HistoryDay[]; holderRows: BlockscoutHolder[]; snapshotAt: string | null; snapshotStale: boolean; transfersStale: boolean; coverage: SnapshotCoverage | null; error: string | null }
-
-type Snapshot = { generatedAt: string; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; holders?: BlockscoutHolder[]; holdersComplete?: boolean; activity?: ActivityCounts; history?: HistoryDay[]; coverage?: SnapshotCoverage }
 
 async function getSnapshot(): Promise<Snapshot> {
   // The snapshot is polled on the same 30s loop as live RPC/Blockscout
@@ -216,15 +213,8 @@ function App() {
       const liveTransfers = transfersResult.status === 'fulfilled' ? transfersResult.value : []
       const snapshot = snapshotResult.status === 'fulfilled' ? snapshotResult.value : null
       const holderRows = holdersResult.status === 'fulfilled' ? holdersResult.value : []
-      const snapshotAt = snapshot?.generatedAt ?? null
-      const snapshotStale = snapshotAt !== null && Date.now() - new Date(snapshotAt).getTime() > SNAPSHOT_STALE_AFTER_MS
-      const usingLiveTransfers = liveTransfers.length > 0
-      // Staleness describes the repository snapshot file, not live data — only apply it
-      // to the transfer rows when those rows actually came from the snapshot fallback.
-      const transfersStale = !usingLiveTransfers && snapshotStale
       const failures = results.filter((result) => result.status === 'rejected')
-      const snapshotHolders = snapshot?.holders ?? []
-      setIndexed({ holders: info?.holdersCount ?? (snapshot?.holdersComplete && snapshotHolders.length ? snapshotHolders.length : null), priceUsd: info?.exchangeRateUsd ?? null, volume24h: info?.volume24h ?? null, transfers: usingLiveTransfers ? liveTransfers : snapshot?.transfers ?? [], activity: snapshot?.activity ?? null, history: snapshot?.history ?? [], holderRows: holderRows.length ? holderRows : snapshotHolders, snapshotAt, snapshotStale, transfersStale, coverage: snapshot?.coverage ?? null, error: failures.length ? `${failures.length} indexed source${failures.length === 1 ? '' : 's'} unavailable` : null })
+      setIndexed(mergeIndexedState({ info, liveTransfers, snapshot, holderRows, failureCount: failures.length, now: Date.now(), snapshotStaleAfterMs: SNAPSHOT_STALE_AFTER_MS }))
     } catch (err) { setIndexed(v => ({ ...v, error: err instanceof Error ? err.message : 'Blockscout unavailable' })) }
     try {
       const [livePool, liveSwaps] = await Promise.all([fetchPoolV3Data(CONFIGURED_POOL.address), getRecentPoolSwaps()])
