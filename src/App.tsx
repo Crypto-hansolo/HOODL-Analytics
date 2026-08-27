@@ -18,7 +18,7 @@ type ActivityCounts = { transfers1h: number; transfers24h: number; transfers7d: 
 type SnapshotCoverage = { coverageComplete7d?: boolean; pagesFetched?: number; oldestTransferAt?: string | null; note?: string }
 type IndexedState = { holders: number | null; priceUsd: string | null; volume24h: string | null; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; activity: ActivityCounts | null; holderRows: BlockscoutHolder[]; snapshotAt: string | null; snapshotStale: boolean; transfersStale: boolean; coverage: SnapshotCoverage | null; error: string | null }
 
-type Snapshot = { generatedAt: string; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; activity?: ActivityCounts; coverage?: SnapshotCoverage }
+type Snapshot = { generatedAt: string; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; holders?: BlockscoutHolder[]; holdersComplete?: boolean; activity?: ActivityCounts; coverage?: SnapshotCoverage }
 
 async function getSnapshot(): Promise<Snapshot> {
   const response = await fetch(`${import.meta.env.BASE_URL}data/snapshot.json`)
@@ -199,7 +199,8 @@ function App() {
       // to the transfer rows when those rows actually came from the snapshot fallback.
       const transfersStale = !usingLiveTransfers && snapshotStale
       const failures = results.filter((result) => result.status === 'rejected')
-      setIndexed({ holders: info?.holdersCount ?? null, priceUsd: info?.exchangeRateUsd ?? null, volume24h: info?.volume24h ?? null, transfers: usingLiveTransfers ? liveTransfers : snapshot?.transfers ?? [], activity: snapshot?.activity ?? null, holderRows, snapshotAt, snapshotStale, transfersStale, coverage: snapshot?.coverage ?? null, error: failures.length ? `${failures.length} indexed source${failures.length === 1 ? '' : 's'} unavailable` : null })
+      const snapshotHolders = snapshot?.holders ?? []
+      setIndexed({ holders: info?.holdersCount ?? (snapshot?.holdersComplete && snapshotHolders.length ? snapshotHolders.length : null), priceUsd: info?.exchangeRateUsd ?? null, volume24h: info?.volume24h ?? null, transfers: usingLiveTransfers ? liveTransfers : snapshot?.transfers ?? [], activity: snapshot?.activity ?? null, holderRows: holderRows.length ? holderRows : snapshotHolders, snapshotAt, snapshotStale, transfersStale, coverage: snapshot?.coverage ?? null, error: failures.length ? `${failures.length} indexed source${failures.length === 1 ? '' : 's'} unavailable` : null })
     } catch (err) { setIndexed(v => ({ ...v, error: err instanceof Error ? err.message : 'Blockscout unavailable' })) }
     try {
       const livePool = await fetchPoolV3Data(CONFIGURED_POOL.address)
