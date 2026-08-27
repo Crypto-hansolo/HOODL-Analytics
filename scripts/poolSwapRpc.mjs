@@ -40,7 +40,14 @@ export function isRateLimitError(err) {
   return err instanceof Error && /429|Too Many Requests/i.test(err.message)
 }
 
-export async function rpcCallWithBackoff(rpcUrl, method, params, { maxRetries = 5, baseDelayMs = 250 } = {}) {
+// This backfill runs as a scheduled background job (every 15 minutes via
+// GitHub Actions), not on a user-facing request path, so it can afford to
+// wait out a rate-limit window rather than give up after a few seconds.
+// Observed in practice: the shared Robinhood Chain edge can 429 for well
+// over 10 seconds under the request volume a full historical eth_getLogs
+// backfill generates, which the previous 5-retry/250ms-base budget (~7.75s
+// total) could not outlast.
+export async function rpcCallWithBackoff(rpcUrl, method, params, { maxRetries = 8, baseDelayMs = 500 } = {}) {
   let attempt = 0
   for (;;) {
     try {
@@ -76,7 +83,15 @@ export async function ethCall(rpcUrl, to, data) {
 
 export async function ethGetLogsChunked({ rpcUrl, address, topics, fromBlock, toBlock, chunkSpan, onChunk }) {
   let start = fromBlock
+  let first = true
   while (start <= toBlock) {
+    // Space consecutive chunk requests out. The public RPC node rate-limits
+    // (observed HTTP 429) on back-to-back eth_getLogs calls with no gap;
+    // rpcCallWithBackoff already retries a single 429, but a small pause
+    // between chunks keeps the whole backfill under the node's rate budget
+    // instead of retrying into it repeatedly.
+    if (!first) await sleep(300)
+    first = false
     const end = start + chunkSpan - 1n > toBlock ? toBlock : start + chunkSpan - 1n
     const logs = await rpcCallWithBackoff(rpcUrl, 'eth_getLogs', [
       { address, topics, fromBlock: '0x' + start.toString(16), toBlock: '0x' + end.toString(16) },

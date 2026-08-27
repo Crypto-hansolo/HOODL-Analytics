@@ -62,7 +62,7 @@ function LoadingBanner({ loading, updated }: { loading: boolean; updated: number
 }
 
 function EmptyState({ title, body, todo }: { title: string; body: string; todo: string }) {
-  return <div className="empty"><div className="empty-icon">◌</div><h3>{title}</h3><p>{body}</p><small><b>TODO</b> {todo}</small></div>
+  return <div className="empty"><div className="empty-icon">◌</div><h3>{title}</h3><p>{body}</p><small className="empty-next"><span>Next verified step</span> {todo}</small></div>
 }
 
 function formatFeeTier(fee: number): string {
@@ -134,7 +134,9 @@ function Chart({ title, subtitle, activity, coverageComplete7d = false, history 
   const detail = isActivityRange
     ? `Relative to the largest verified range in this snapshot (${activityMax} transfers). This is not a pool swap or volume series.`
     : `Sum of ${selection.days.length} verified closed UTC day${selection.days.length === 1 ? '' : 's'}${selection.gapDays ? ` · ${selection.gapDays} day${selection.gapDays === 1 ? '' : 's'} without verified data are shown as a gap, not zero` : ''}. This is not a pool swap or volume series.`
-  return <section className="panel chart-panel"><div className="panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div><div className="range" aria-label="Historical time range">{RANGE_KEYS.map((item) => <button key={item} className={range === item ? 'selected' : ''} aria-pressed={range === item} onClick={() => setRange(item)}>{item}</button>)}</div></div><div className={selection.available ? 'chart-value' : 'chart-empty'}>{selection.available ? <div className="chart-reading"><div className="chart-reading-head"><span>{selection.count} verified token transfers · {range}</span><strong>{barCaption}</strong></div><div className="activity-track" role="img" aria-label={`${selection.count} verified token transfers in the ${range} range`}><span style={{ width: `${barWidth}%` }} /></div><small>{detail}</small></div> : <div><span>Historical series unavailable · {range}</span><small>{selection.reason}</small></div>}</div></section>
+  const showDayBars = !isActivityRange && selection.available && selection.days.length > 1
+  const dayMax = showDayBars ? Math.max(...selection.days.map((d) => d.transferCount), 1) : 1
+  return <section className="panel chart-panel"><div className="panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div><div className="range" aria-label="Historical time range">{RANGE_KEYS.map((item) => <button key={item} className={range === item ? 'selected' : ''} aria-pressed={range === item} onClick={() => setRange(item)}>{item}</button>)}</div></div><div className={selection.available ? 'chart-value' : 'chart-empty'}>{selection.available ? <div className="chart-reading"><div className="chart-reading-head"><span>{selection.count} verified token transfers · {range}</span><strong>{barCaption}</strong></div>{showDayBars ? <div className="chart-bars" role="img" aria-label={`Verified daily transfer counts for ${selection.days.length} days`}>{selection.days.map((day) => <span key={day.date} className="chart-bar" style={{ height: `${Math.max(4, Math.round((day.transferCount / dayMax) * 100))}%` }} title={`${day.date} · ${formatInteger(day.transferCount)} verified transfer${day.transferCount === 1 ? '' : 's'}`} />)}</div> : <div className="activity-track" role="img" aria-label={`${selection.count} verified token transfers in the ${range} range`}><span style={{ width: `${barWidth}%` }} /></div>}<small>{detail}</small></div> : <div><span>Historical series unavailable · {range}</span><small>{selection.reason}</small></div>}</div></section>
 }
 
 function StatusRow({ tone, label, value, title }: { tone: DotTone; label: string; value: string; title?: string }) {

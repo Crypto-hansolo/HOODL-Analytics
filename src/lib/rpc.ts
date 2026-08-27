@@ -13,7 +13,11 @@ export class RpcError extends Error {
 
 let requestId = 0
 
-async function rpcCall<T>(method: string, params: unknown[]): Promise<T> {
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function rpcCallOnce<T>(method: string, params: unknown[]): Promise<T> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
@@ -46,6 +50,25 @@ async function rpcCall<T>(method: string, params: unknown[]): Promise<T> {
     throw new RpcError(err instanceof Error ? err.message : 'RPC request failed')
   } finally {
     clearTimeout(timeout)
+  }
+}
+
+// The public RPC node rate-limits under sustained polling (confirmed: bursts
+// of parallel reads on the 30s refresh loop return HTTP 429). A single 429
+// used to surface immediately as "Unavailable" even though the data is
+// really just one retry away — so give transient rate limits two short
+// backoff retries before giving up and reporting unavailable.
+async function rpcCall<T>(method: string, params: unknown[]): Promise<T> {
+  let attempt = 0
+  for (;;) {
+    try {
+      return await rpcCallOnce<T>(method, params)
+    } catch (err) {
+      const isRateLimited = err instanceof RpcError && /\b429\b/.test(err.message)
+      if (!isRateLimited || attempt >= 2) throw err
+      attempt += 1
+      await sleep(attempt * 400)
+    }
   }
 }
 

@@ -69,8 +69,15 @@ async function indexPoolSwaps(priorSnapshot, nowDate) {
     console.warn(`Swap log chunk loop stopped early: ${error instanceof Error ? error.message : 'request failed'}`)
   }
 
-  if (!prior && decodedByBlock.length === 0 && !reachedLatest) {
-    // Total failure on the very first attempt: nothing verified yet, nothing to persist.
+  // Only bail with nothing persisted when NO chunk succeeded at all (the very
+  // first eth_getLogs call failed before lastGoodBlock could advance past
+  // fromBlock - 1) and there is no prior indexed state to fall back to.
+  // Otherwise persist whatever range was actually confirmed — e.g. a
+  // rate-limited (429) chunk loop that got through the first N chunks with
+  // zero matching events still means those N chunks are verified clear, so
+  // the next scheduled run resumes from lastGoodBlock + 1 instead of
+  // restarting the whole backfill from genesis and hitting the same limit.
+  if (!prior && lastGoodBlock < fromBlock) {
     return null
   }
 
@@ -227,6 +234,12 @@ snapshot.holders = holders
 snapshot.holdersComplete = holdersComplete
 
 try {
+  // The transfer/holder pagination above already spent a burst of requests
+  // against the Robinhood Chain edge (observed to rate-limit the RPC host
+  // too, HTTP 429, even though it's a different hostname — same edge/WAF
+  // budget). A short pause here lets that window clear before the swap
+  // indexer's own RPC calls start, instead of starting them already rate-limited.
+  await new Promise((resolve) => setTimeout(resolve, 3000))
   snapshot.swaps = await indexPoolSwaps(priorSnapshot, now)
 } catch (error) {
   console.warn(`Swap indexing unavailable: ${error instanceof Error ? error.message : 'request failed'}`)
