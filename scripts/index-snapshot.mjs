@@ -1,8 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { buildSwapDayBuckets, classifySwap, computeSwapActivity, decodeSwapLog, mergeSwapHistory, SWAP_TOPIC0, trimRecentSwaps } from './poolSwapIndexer.mjs'
+import { ethBlockNumber, ethGetLogsChunked, fetchBlockTimestamps, resolvePoolIdentity } from './poolSwapRpc.mjs'
 
 const token = '0x9fb3c2D71424122a5886DaC627177385d185DF09'
 const pool = '0xF87761231646DA4aa00905c237EaCbfF112Df930'
 const api = 'https://robinhoodchain.blockscout.com/api/v2'
+const RPC_URL = 'https://rpc.mainnet.chain.robinhood.com'
+const SWAP_CHUNK_SPAN = 2_000_000n
 const now = new Date()
 const SNAPSHOT_PATH = 'public/data/snapshot.json'
 const MAX_HISTORY_DAYS = 90
@@ -13,6 +17,85 @@ async function readPriorSnapshot() {
     return JSON.parse(await readFile(SNAPSHOT_PATH, 'utf8'))
   } catch {
     return null
+  }
+}
+
+// Indexes the configured pool's Swap events into a persistent, incrementally-
+// updated ledger. Always resumes from the block after the last one it
+// successfully covered (full genesis backfill on the very first run). Any
+// failure during the chunk loop stops the loop but still returns whatever
+// was actually confirmed — never claims coverage it doesn't have, and never
+// throws away chunks that already succeeded this run.
+async function indexPoolSwaps(priorSnapshot, nowDate) {
+  const prior = priorSnapshot?.swaps ?? null
+  const identity = await resolvePoolIdentity(RPC_URL, pool, token)
+  const latest = await ethBlockNumber(RPC_URL)
+  const fromBlock = prior?.indexing ? BigInt(prior.indexing.lastIndexedBlock) + 1n : 0n
+  if (fromBlock > latest) {
+    return prior ? { ...prior, identity } : null
+  }
+
+  let coverageStartMs = prior?.indexing?.coverageStartMs ?? null
+  if (coverageStartMs === null) {
+    const genesisTimestamps = await fetchBlockTimestamps(RPC_URL, [0n])
+    coverageStartMs = genesisTimestamps.get(0n) ?? nowDate.getTime()
+  }
+
+  const decodedByBlock = []
+  let lastGoodBlock = fromBlock - 1n
+  let reachedLatest = false
+  try {
+    await ethGetLogsChunked({
+      rpcUrl: RPC_URL,
+      address: pool,
+      topics: [SWAP_TOPIC0],
+      fromBlock,
+      toBlock: latest,
+      chunkSpan: SWAP_CHUNK_SPAN,
+      onChunk: async ({ toBlock, logs }) => {
+        for (const log of logs) {
+          try {
+            const parsed = decodeSwapLog(log)
+            decodedByBlock.push({ ...parsed, hash: log.transactionHash, blockNumber: Number.parseInt(log.blockNumber, 16) })
+          } catch {
+            // malformed log skipped, matches src/lib/poolSwaps.ts's live-path behavior
+          }
+        }
+        lastGoodBlock = toBlock
+      },
+    })
+    reachedLatest = true
+  } catch (error) {
+    console.warn(`Swap log chunk loop stopped early: ${error instanceof Error ? error.message : 'request failed'}`)
+  }
+
+  if (!prior && decodedByBlock.length === 0 && !reachedLatest) {
+    // Total failure on the very first attempt: nothing verified yet, nothing to persist.
+    return null
+  }
+
+  const blockNumbers = decodedByBlock.map((s) => BigInt(s.blockNumber))
+  const timestamps = await fetchBlockTimestamps(RPC_URL, blockNumbers)
+  const classified = decodedByBlock.flatMap((s) => {
+    const timestampMs = timestamps.get(BigInt(s.blockNumber))
+    if (timestampMs === undefined) return []
+    const { side, hoodlAmount } = classifySwap({ amount0: s.amount0, amount1: s.amount1, hoodlIsToken0: identity.hoodlIsToken0 })
+    return [{ blockNumber: s.blockNumber, timestampMs, sender: s.sender, hash: s.hash, side, hoodlAmount }]
+  })
+
+  const priorRecent = (prior?.recent ?? []).map((r) => ({ ...r, hoodlAmount: BigInt(r.hoodlAmount) }))
+  const recent = trimRecentSwaps({ swaps: [...priorRecent, ...classified], nowMs: nowDate.getTime() })
+  const priorHistory = (prior?.history ?? []).map((d) => ({ ...d, volumeHoodl: BigInt(d.volumeHoodl) }))
+  const newDays = buildSwapDayBuckets({ swaps: classified, nowMs: nowDate.getTime(), cutoffMs: coverageStartMs })
+  const history = mergeSwapHistory({ priorHistory, newDays })
+  const activity = computeSwapActivity({ swaps: recent, nowMs: nowDate.getTime() })
+
+  return {
+    identity,
+    indexing: { lastIndexedBlock: Number(lastGoodBlock), backfillComplete: reachedLatest, chunkBlockSpan: Number(SWAP_CHUNK_SPAN), coverageStartMs },
+    recent: recent.map((r) => ({ ...r, hoodlAmount: r.hoodlAmount.toString() })),
+    history: history.map((d) => ({ ...d, volumeHoodl: d.volumeHoodl.toString() })),
+    activity: { ...activity, volume24hHoodl: activity.volume24hHoodl.toString() },
   }
 }
 
@@ -111,7 +194,7 @@ if (coverageComplete7d) {
 }
 
 const snapshot = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   generatedAt: now.toISOString(),
   source: { name: 'Blockscout API v2', url: `${api}/tokens/${token}/transfers`, chainId: 4663, token, pool },
   coverage: { kind: 'recent-token-transfers', pagesFetched, maxPages: MAX_PAGES, coverageComplete7d, oldestTransferAt, note: coverageComplete7d ? 'Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers.' : `Only a bounded prefix of the transfer index was returned${transferIndexError ? `; pagination stopped after an indexer error (${transferIndexError})` : ''}. Activity counts are lower bounds. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers.` },
@@ -142,6 +225,14 @@ try {
 }
 snapshot.holders = holders
 snapshot.holdersComplete = holdersComplete
+
+try {
+  snapshot.swaps = await indexPoolSwaps(priorSnapshot, now)
+} catch (error) {
+  console.warn(`Swap indexing unavailable: ${error instanceof Error ? error.message : 'request failed'}`)
+  snapshot.swaps = priorSnapshot?.swaps ?? null
+}
+
 await mkdir('public/data', { recursive: true })
 await writeFile('public/data/snapshot.json', `${JSON.stringify(snapshot, null, 2)}\n`)
 console.log(`Wrote ${transfers.length} verified transfers at ${snapshot.generatedAt}`)

@@ -16,6 +16,20 @@ export interface SnapshotCoverage {
   note?: string
 }
 
+export interface SwapActivitySnapshot {
+  swaps24h: number
+  volume24hHoodl: string
+  buyCount24h: number
+  sellCount24h: number
+  uniqueTraders24h: number
+}
+
+export interface SwapIndexingMeta {
+  lastIndexedBlock: number
+  backfillComplete: boolean
+  coverageStartMs: number
+}
+
 /** Which data source actually backs a field right now — never inferred, always traceable. */
 export type FieldSource = 'live' | 'snapshot' | 'unavailable'
 
@@ -27,6 +41,10 @@ export interface Snapshot {
   activity?: ActivityCounts
   history?: HistoryDay[]
   coverage?: SnapshotCoverage
+  swaps?: {
+    activity?: SwapActivitySnapshot
+    indexing?: SwapIndexingMeta
+  }
 }
 
 export interface IndexedState {
@@ -44,6 +62,9 @@ export interface IndexedState {
   holdersSource: FieldSource
   coverage: SnapshotCoverage | null
   error: string | null
+  swapActivity: SwapActivitySnapshot | null
+  swapsSource: FieldSource
+  swapIndexing: SwapIndexingMeta | null
 }
 
 export interface MergeIndexedStateInput {
@@ -67,6 +88,8 @@ export function mergeIndexedState(input: MergeIndexedStateInput): IndexedState {
   const snapshotHolders = snapshot?.holders ?? []
   const usingLiveHolders = holderRows.length > 0
   const snapshotTransfers = snapshot?.transfers ?? []
+  const swapActivity = snapshot?.swaps?.activity ?? null
+  const swapIndexing = snapshot?.swaps?.indexing ?? null
   return {
     holders: info?.holdersCount ?? (snapshot?.holdersComplete && snapshotHolders.length ? snapshotHolders.length : null),
     priceUsd: info?.exchangeRateUsd ?? null,
@@ -82,5 +105,8 @@ export function mergeIndexedState(input: MergeIndexedStateInput): IndexedState {
     holdersSource: usingLiveHolders ? 'live' : snapshotHolders.length ? 'snapshot' : 'unavailable',
     coverage: snapshot?.coverage ?? null,
     error: failureCount ? `${failureCount} indexed source${failureCount === 1 ? '' : 's'} unavailable` : null,
+    swapActivity,
+    swapsSource: swapActivity ? 'snapshot' : 'unavailable',
+    swapIndexing,
   }
 }

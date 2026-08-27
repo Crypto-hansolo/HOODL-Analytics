@@ -36,3 +36,28 @@ describe('mergeIndexedState', () => {
     expect(state.holdersSource).toBe('live')
   })
 })
+
+describe('mergeIndexedState — swap activity', () => {
+  it('surfaces verified swap activity from the snapshot', () => {
+    const swapActivity = { swaps24h: 5, volume24hHoodl: '1000', buyCount24h: 3, sellCount24h: 2, uniqueTraders24h: 4 }
+    const state = mergeIndexedState({
+      info: null,
+      liveTransfers: [],
+      holderRows: [],
+      failureCount: 0,
+      now: 2000,
+      snapshotStaleAfterMs: 500,
+      snapshot: { generatedAt: '1970-01-01T00:00:00.000Z', transfers: [], swaps: { activity: swapActivity, indexing: { lastIndexedBlock: 10, backfillComplete: true, coverageStartMs: 0 } } },
+    })
+    expect(state.swapActivity).toEqual(swapActivity)
+    expect(state.swapsSource).toBe('snapshot')
+    expect(state.swapIndexing).toEqual({ lastIndexedBlock: 10, backfillComplete: true, coverageStartMs: 0 })
+  })
+
+  it('degrades to unavailable when the snapshot has no swaps section (old schema)', () => {
+    const state = mergeIndexedState({ info: null, liveTransfers: [], holderRows: [], failureCount: 0, now: 2000, snapshotStaleAfterMs: 500, snapshot: { generatedAt: '1970-01-01T00:00:00.000Z', transfers: [] } })
+    expect(state.swapActivity).toBeNull()
+    expect(state.swapsSource).toBe('unavailable')
+    expect(state.swapIndexing).toBeNull()
+  })
+})

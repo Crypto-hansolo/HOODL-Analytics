@@ -13,6 +13,7 @@ import type { ActivityCounts, HistoryDay, RangeKey } from './lib/historyRange'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { getRecentPoolSwaps } from './lib/poolSwaps'
 import type { PoolSwap } from './lib/poolSwaps'
+import { classifySwapDirection } from './lib/poolSwapDirection'
 import { mergeIndexedState } from './lib/mergeIndexedState'
 import type { IndexedState, Snapshot } from './lib/mergeIndexedState'
 
@@ -83,6 +84,19 @@ function swapVolume(swaps: PoolSwap[], pool: PoolV3Data | null, decimals: number
     return sum + (amount < 0n ? -amount : amount)
   }, 0n)
   return `${formatUnits(total, decimals)} HOODL`
+}
+
+function swapSideCounts(swaps: PoolSwap[], pool: PoolV3Data | null): { buy: number; sell: number } | null {
+  const hoodlAddress = HOODL_TOKEN.address.toLowerCase()
+  const token0 = pool?.token0.value?.toLowerCase()
+  const token1 = pool?.token1.value?.toLowerCase()
+  if (!swaps.length || (token0 !== hoodlAddress && token1 !== hoodlAddress)) return null
+  const hoodlIsToken0 = token0 === hoodlAddress
+  return swaps.reduce((counts, swap) => {
+    const side = classifySwapDirection({ amount0: swap.amount0, amount1: swap.amount1, hoodlIsToken0 }).side
+    counts[side] += 1
+    return counts
+  }, { buy: 0, sell: 0 })
 }
 
 function PoolV3Metric<T>({ label, field, render }: { label: string; field: PoolV3Field<T>; render: (value: T) => string }) {
@@ -172,6 +186,7 @@ function WalletLookup() {
 
 function PoolsTab({ poolV3, quote, swaps, decimals }: { poolV3: PoolV3Data | null; quote: PoolSpotQuote | null; swaps: PoolSwap[]; decimals: number | null }) {
   const anyOnChain = poolV3 ? Object.values(poolV3).some((f) => f.status === 'on-chain') : false
+  const sideCounts = swapSideCounts(swaps, poolV3)
   return <>
     <section className="panel pool-card">
       <div>
@@ -199,7 +214,7 @@ function PoolsTab({ poolV3, quote, swaps, decimals }: { poolV3: PoolV3Data | nul
       </div>
       <div className="source-note">token0/token1 order, fee tier, tick spacing, liquidity, and slot0 are read directly from the pool contract. Which token is WETH is not assumed here — verify via the addresses above. No price, TVL, volume, or reward figures are derived from these raw values.</div>
     </section>
-    {swaps.length ? <section className="panel"><div className="panel-head"><div><h2>Verified swap activity</h2><p>Direct RPC logs · bounded 50,000-block window</p></div><Badge tone="live">INDEXED</Badge></div><div className="metrics" style={{ marginTop: 20 }}><Metric label="Swap events" value={formatInteger(swaps.length)} source="Indexed" /><Metric label="Unique senders" value={formatInteger(new Set(swaps.map((swap) => swap.sender.toLowerCase())).size)} source="Calculated" /><Metric label="HOODL volume" value={swapVolume(swaps, poolV3, decimals)} source={decimals !== null ? 'Calculated' : 'Unavailable'} error={decimals !== null ? null : 'Token decimals unavailable'} /></div><div className="source-note">Events are decoded from the configured pool's canonical Uniswap V3 Swap topic via eth_getLogs. This is a bounded event count, not lifetime volume; malformed logs are excluded.</div></section> : <EmptyState title="Pool price, TVL, volume, and rewards unavailable" body="No verified Swap events were returned by the direct RPC query. Nothing is inferred from transfers or raw pool state." todo="Retry the direct pool log query. Fees and rewards still require verified event semantics and a reward contract." />}
+    {swaps.length ? <section className="panel"><div className="panel-head"><div><h2>Verified swap activity</h2><p>Direct RPC logs · bounded 50,000-block window</p></div><Badge tone="live">INDEXED</Badge></div><div className="metrics" style={{ marginTop: 20 }}><Metric label="Swap events" value={formatInteger(swaps.length)} source="Indexed" /><Metric label="Buys" value={sideCounts ? formatInteger(sideCounts.buy) : '—'} source={sideCounts ? 'Calculated' : 'Unavailable'} /><Metric label="Sells" value={sideCounts ? formatInteger(sideCounts.sell) : '—'} source={sideCounts ? 'Calculated' : 'Unavailable'} /><Metric label="Unique senders" value={formatInteger(new Set(swaps.map((swap) => swap.sender.toLowerCase())).size)} source="Calculated" /><Metric label="HOODL volume" value={swapVolume(swaps, poolV3, decimals)} source={decimals !== null ? 'Calculated' : 'Unavailable'} error={decimals !== null ? null : 'Token decimals unavailable'} /></div><div className="source-note">Events are decoded from the configured pool's canonical Uniswap V3 Swap topic via eth_getLogs. This is a bounded event count, not lifetime volume; malformed logs are excluded.</div></section> : <EmptyState title="Pool price, TVL, volume, and rewards unavailable" body="No verified Swap events were returned by the direct RPC query. Nothing is inferred from transfers or raw pool state." todo="Retry the direct pool log query. Fees and rewards still require verified event semantics and a reward contract." />}
   </>
 }
 
@@ -228,13 +243,25 @@ function TabContent({ tab, token, chain, poolV3, quote, swaps, indexed, updated 
   if (tab === 'Overview') return <Overview token={token} chain={chain} indexed={indexed} updated={updated} />
   if (tab === 'Holders') return <HoldersTab indexed={indexed} token={token} />
   if (tab === 'Pools') return <PoolsTab poolV3={poolV3} quote={quote} swaps={swaps} decimals={token.decimals} />
-  if (tab === 'Trading') return <><div className="metrics"><Metric label="Swap events" value={swaps.length ? formatInteger(swaps.length) : '—'} source={swaps.length ? 'Indexed' : 'Unavailable'} error={swaps.length ? null : 'Direct pool log query returned no verified events'} /><Metric label="Verified transfers" value={indexed.transfers.length ? formatInteger(indexed.transfers.length) : '—'} source={indexed.transfers.length ? 'Indexed' : 'Unavailable'} error={indexed.transfers.length ? null : indexed.error} /><Metric label="HOODL volume" value={swapVolume(swaps, poolV3, token.decimals)} source={swaps.length && token.decimals !== null ? 'Calculated' : 'Unavailable'} error={swaps.length && token.decimals !== null ? null : 'Bounded pool swap volume unavailable'} /><Metric label="Unique traders" value={swaps.length ? formatInteger(new Set(swaps.map((swap) => swap.sender.toLowerCase())).size) : '—'} source={swaps.length ? 'Calculated' : 'Unavailable'} /></div><Chart title="Transfer activity" subtitle="Verified token transfers · bounded source coverage" activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><TransferActivity transfers={indexed.transfers} decimals={token.decimals} stale={indexed.transfersStale} error={indexed.error} /></>
+  if (tab === 'Trading') {
+    const swapActivity = indexed.swapActivity
+    return <>
+      <div className="metrics"><Metric label="Swap events" value={swaps.length ? formatInteger(swaps.length) : '—'} source={swaps.length ? 'Indexed' : 'Unavailable'} error={swaps.length ? null : 'Direct pool log query returned no verified events'} /><Metric label="Verified transfers" value={indexed.transfers.length ? formatInteger(indexed.transfers.length) : '—'} source={indexed.transfers.length ? 'Indexed' : 'Unavailable'} error={indexed.transfers.length ? null : indexed.error} /><Metric label="HOODL volume" value={swapVolume(swaps, poolV3, token.decimals)} source={swaps.length && token.decimals !== null ? 'Calculated' : 'Unavailable'} error={swaps.length && token.decimals !== null ? null : 'Bounded pool swap volume unavailable'} /><Metric label="Unique traders" value={swaps.length ? formatInteger(new Set(swaps.map((swap) => swap.sender.toLowerCase())).size) : '—'} source={swaps.length ? 'Calculated' : 'Unavailable'} /></div>
+      <div className="metrics" style={{ marginTop: 20 }}>
+        <Metric label="24h volume (indexed)" value={swapActivity && token.decimals !== null ? `${formatUnits(BigInt(swapActivity.volume24hHoodl), token.decimals)} HOODL` : '—'} source={swapActivity ? 'Indexed' : 'Unavailable'} error={swapActivity ? null : 'Verified swap snapshot unavailable'} accent />
+        <Metric label="24h buys / sells" value={swapActivity ? `${formatInteger(swapActivity.buyCount24h)} / ${formatInteger(swapActivity.sellCount24h)}` : '—'} source={swapActivity ? 'Indexed' : 'Unavailable'} error={swapActivity ? null : 'Verified swap snapshot unavailable'} />
+        <Metric label="24h unique traders" value={swapActivity ? formatInteger(swapActivity.uniqueTraders24h) : '—'} source={swapActivity ? 'Indexed' : 'Unavailable'} error={swapActivity ? null : 'Verified swap snapshot unavailable'} />
+      </div>
+      <div className="source-note">24h volume, buy/sell, and trader figures come from a persisted, chunked eth_getLogs index of this pool's full Swap-event history, refreshed every 15 minutes — not from the bounded live RPC window above. &quot;Trader&quot; means a unique Swap-event sender address, which is not always the same as a unique wallet.</div>
+      <Chart title="Transfer activity" subtitle="Verified token transfers · bounded source coverage" activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><TransferActivity transfers={indexed.transfers} decimals={token.decimals} stale={indexed.transfersStale} error={indexed.error} />
+    </>
+  }
   const title = 'Fees & rewards'
   return <><div className="metrics"><Metric label="Total volume" value="—" /><Metric label="Generated fees" value="—" /><Metric label="WETH distributed" value="—" /><Metric label="Distribution efficiency" value="—" /></div><Chart title={title} subtitle="Historical values will appear after verified indexing" /><EmptyState title={`${title} data unavailable`} body="No unverified DEX, fee, reward, or volume values are displayed." todo="Connect a verified pool-event indexer and document the event semantics before enabling calculations." /></>
 }
 
 function App() {
-  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [swaps, setSwaps] = useState<PoolSwap[]>([]); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, transfersSource: 'unavailable', holdersSource: 'unavailable', coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [swaps, setSwaps] = useState<PoolSwap[]>([]); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, transfersSource: 'unavailable', holdersSource: 'unavailable', coverage: null, error: null, swapActivity: null, swapsSource: 'unavailable', swapIndexing: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   async function load() {
     if (loadingRef.current) return
