@@ -10,6 +10,7 @@ describe('mergeIndexedState', () => {
     expect(state.transfers).toEqual([transfer])
     expect(state.snapshotStale).toBe(true)
     expect(state.transfersStale).toBe(false)
+    expect(state.transfersSource).toBe('live')
   })
 
   it('flags snapshot fallback rows stale and preserves verified snapshot fields', () => {
@@ -18,5 +19,20 @@ describe('mergeIndexedState', () => {
     expect(state.transfersStale).toBe(true)
     expect(state.holders).toBe(1)
     expect(state.error).toBe('2 indexed sources unavailable')
+    expect(state.transfersSource).toBe('snapshot')
+    expect(state.holdersSource).toBe('snapshot')
+  })
+
+  it('reports unavailable sources when neither live nor snapshot data is present', () => {
+    const state = mergeIndexedState({ info: null, liveTransfers: [], holderRows: [], failureCount: 1, now: 2000, snapshotStaleAfterMs: 500, snapshot: null })
+    expect(state.transfersSource).toBe('unavailable')
+    expect(state.holdersSource).toBe('unavailable')
+  })
+
+  it('prefers live holder rows over the snapshot fallback', () => {
+    const liveHolders = [{ address: '0xd', value: '9' }]
+    const state = mergeIndexedState({ info, liveTransfers: [], holderRows: liveHolders, failureCount: 0, now: 2000, snapshotStaleAfterMs: 500, snapshot: { generatedAt: '1970-01-01T00:00:00.000Z', transfers: [], holders: [{ address: '0xc', value: '4' }], holdersComplete: true } })
+    expect(state.holderRows).toEqual(liveHolders)
+    expect(state.holdersSource).toBe('live')
   })
 })

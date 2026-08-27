@@ -4,7 +4,7 @@ import './App.css'
 import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, SNAPSHOT_STALE_AFTER_MS, STALE_AFTER_MS } from './config'
 import { erc20BalanceOf, erc20Decimals, erc20Name, erc20Symbol, erc20TotalSupply } from './lib/erc20'
 import { ethBlockNumber, ethChainId, ethGetCode, RpcError } from './lib/rpc'
-import { formatCompactUnits, formatInteger, formatUnits, isValidAddress, truncateAddress } from './lib/format'
+import { formatCompactUnits, formatInteger, formatTimeAgo, formatUnits, isValidAddress, truncateAddress } from './lib/format'
 import { computeSpotQuote, fetchPoolV3Data } from './lib/uniswapV3'
 import { getTokenHolders, getTokenInfo, getTokenTransfers } from './lib/blockscout'
 import type { PoolSpotQuote, PoolV3Data, PoolV3Field } from './lib/uniswapV3'
@@ -34,6 +34,16 @@ const unavailable = 'Awaiting verified on-chain indexing'
 
 function Badge({ children, tone = 'muted' }: { children: string; tone?: 'live' | 'calc' | 'muted' | 'warn' }) {
   return <span className={`badge ${tone}`}><i />{children}</span>
+}
+
+type DotTone = 'green' | 'yellow' | 'red' | 'gray'
+
+function Dot({ tone }: { tone: DotTone }) {
+  return <i className={`dot ${tone}`} />
+}
+
+function sourceLabel(source: 'live' | 'snapshot' | 'unavailable'): string {
+  return source === 'live' ? 'live' : source === 'snapshot' ? 'snapshot fallback' : 'unavailable'
 }
 
 type MetricSource = 'On-chain' | 'Indexed' | 'Calculated' | 'Unavailable'
@@ -113,11 +123,43 @@ function Chart({ title, subtitle, activity, coverageComplete7d = false, history 
   return <section className="panel chart-panel"><div className="panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div><div className="range" aria-label="Historical time range">{RANGE_KEYS.map((item) => <button key={item} className={range === item ? 'selected' : ''} aria-pressed={range === item} onClick={() => setRange(item)}>{item}</button>)}</div></div><div className={selection.available ? 'chart-value' : 'chart-empty'}>{selection.available ? <div className="chart-reading"><div className="chart-reading-head"><span>{selection.count} verified token transfers · {range}</span><strong>{barCaption}</strong></div><div className="activity-track" role="img" aria-label={`${selection.count} verified token transfers in the ${range} range`}><span style={{ width: `${barWidth}%` }} /></div><small>{detail}</small></div> : <div><span>Historical series unavailable · {range}</span><small>{selection.reason}</small></div>}</div></section>
 }
 
+function StatusRow({ tone, label, value, title }: { tone: DotTone; label: string; value: string; title?: string }) {
+  return <div className="status-row" title={title}><span><Dot tone={tone} />{label}</span><b>{value}</b></div>
+}
+
+function DataIntegrityPanel({ token, chain, indexed }: { token: TokenState; chain: ChainState; indexed: IndexedState }) {
+  const networkTone: DotTone = chain.error ? 'red' : chain.chainId === CHAIN.id ? 'green' : chain.chainId === null ? 'gray' : 'yellow'
+  const networkValue = chain.error ? 'Unavailable' : chain.chainId === CHAIN.id ? 'Confirmed' : chain.chainId === null ? 'Pending' : 'Wrong network'
+  const transfersTone: DotTone = !indexed.transfers.length ? 'gray' : indexed.transfersSource === 'live' ? 'green' : 'yellow'
+  const transfersValue = indexed.transfers.length ? `${formatInteger(indexed.transfers.length)} events · ${sourceLabel(indexed.transfersSource)}` : 'Unavailable'
+  const holdersTone: DotTone = !indexed.holderRows.length ? 'gray' : indexed.holdersSource === 'live' ? 'green' : 'yellow'
+  const holdersValue = indexed.holderRows.length ? `${formatInteger(indexed.holderRows.length)} rows · ${sourceLabel(indexed.holdersSource)}` : 'Unavailable'
+  const coverage = indexed.coverage
+  const coverageTone: DotTone = !coverage ? 'gray' : coverage.coverageComplete7d ? 'green' : 'yellow'
+  const coverageValue = !coverage ? 'Unavailable' : coverage.coverageComplete7d ? '7-day window confirmed' : `Partial · ${coverage.pagesFetched ?? '—'}/${coverage.maxPages ?? '—'} pages`
+  const snapshotTone: DotTone = !indexed.snapshotAt ? 'gray' : indexed.snapshotStale ? 'yellow' : 'green'
+  const snapshotValue = indexed.snapshotAt ? `${formatTimeAgo(new Date(indexed.snapshotAt).getTime())}${indexed.snapshotStale ? ' · stale' : ''}` : 'No snapshot yet'
+  const snapshotTitle = indexed.snapshotAt ? `Snapshot generated ${new Date(indexed.snapshotAt).toLocaleString()}` : undefined
+  return (
+    <section className="panel status-panel">
+      <div className="panel-head"><div><h2>Data integrity</h2><p>What is verified right now</p></div><Badge tone={indexed.snapshotStale ? 'warn' : 'live'}>{indexed.snapshotStale ? 'STALE SNAPSHOT' : 'TRANSPARENT'}</Badge></div>
+      <StatusRow tone={token.error ? 'red' : 'green'} label="Token contract" value={token.error ? 'Unavailable' : 'Configured'} />
+      <StatusRow tone={networkTone} label="Network identity" value={networkValue} />
+      <StatusRow tone={transfersTone} label="Transfer activity" value={transfersValue} />
+      <StatusRow tone={holdersTone} label="Holder ranking" value={holdersValue} />
+      <StatusRow tone={coverageTone} label="7-day coverage" value={coverageValue} />
+      <StatusRow tone={snapshotTone} label="Snapshot freshness" value={snapshotValue} title={snapshotTitle} />
+      <StatusRow tone="gray" label="Fees / WETH rewards" value="Unavailable" />
+      <div className="source-note">Sources: RPC for contract reads; Blockscout for indexed token metadata and transfers. Pool swaps, historical volume, rewards, and pool-derived economics remain unavailable until verified.{coverage && !coverage.coverageComplete7d ? ` Activity counts withheld because the snapshot reached only ${coverage.pagesFetched ?? 'a bounded number of'} page(s) and does not confirm 7-day coverage.` : ''}</div>
+    </section>
+  )
+}
+
 function Overview({ token, chain, indexed, updated }: { token: TokenState; chain: ChainState; indexed: IndexedState; updated: number }) {
   return <>
     <div className="hero-grid"><div className="hero-copy"><Badge tone="live">READ-ONLY TERMINAL</Badge><h1>Understand the<br /><em>HOODL economy.</em></h1><p>Track trading activity, liquidity, and WETH distributions on Robinhood Chain — with every metric sourced, timestamped, and honest.</p><div className="hero-links"><a href={`${CHAIN.explorerUrl}/token/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">View token on Blockscout ↗</a><span>·</span><span>Chain {CHAIN.id}</span></div></div><div className="network-card"><div className="network-orbit"><span>H</span></div><div><span className="eyebrow">NETWORK STATUS</span><h3>{CHAIN.name}</h3><Badge tone={chain.error || (chain.chainId !== null && chain.chainId !== CHAIN.id) ? 'warn' : chain.chainId === CHAIN.id ? 'live' : 'muted'}>{chain.error ? 'RPC unavailable' : chain.chainId === null ? 'Awaiting RPC' : chain.chainId !== CHAIN.id ? 'Wrong network' : 'Read-only connected'}</Badge></div><div className="network-meta"><span>Chain ID <b>{chain.chainId ?? '—'}</b></span><span>Latest block <b>{chain.block ? formatInteger(Number(chain.block)) : '—'}</b></span></div></div></div>
     <div className="metrics"><Metric label="Token name" value={token.name ?? '—'} source={token.name ? 'On-chain' : 'Unavailable'} error={token.name ? null : token.error} accent /><Metric label="Symbol" value={token.symbol ?? '—'} source={token.symbol ? 'On-chain' : 'Unavailable'} error={token.symbol ? null : token.error} /><Metric label="Total supply" value={token.supply !== null && token.decimals !== null ? formatCompactUnits(token.supply, token.decimals) : '—'} source={token.supply !== null ? 'Calculated' : 'Unavailable'} error={token.supply !== null ? null : token.error} /><Metric label="Price (USD)" value={indexed.priceUsd ?? '—'} source={indexed.priceUsd ? 'Indexed' : 'Unavailable'} error={indexed.priceUsd ? null : indexed.error} /><Metric label="24h volume" value={indexed.volume24h ?? '—'} source={indexed.volume24h ? 'Indexed' : 'Unavailable'} error={indexed.volume24h ? null : indexed.error} /><Metric label="Holders" value={indexed.holders !== null ? formatInteger(indexed.holders) : '—'} source={indexed.holders !== null ? 'Indexed' : 'Unavailable'} error={indexed.holders !== null ? null : indexed.error} /></div>
-    <div className="two-col"><Chart title="Transfer activity" subtitle={`Verified token transfers · paginated snapshot${indexed.snapshotStale ? ' · stale' : ''}`} activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><section className="panel status-panel"><div className="panel-head"><div><h2>Data integrity</h2><p>What is verified right now</p></div><Badge tone={indexed.snapshotStale ? 'warn' : 'live'}>{indexed.snapshotStale ? 'STALE SNAPSHOT' : 'TRANSPARENT'}</Badge></div><div className="status-row"><span><i className="dot green" />Token contract</span><b>{token.error ? 'Unavailable' : 'Configured'}</b></div><div className="status-row"><span><i className="dot green" />Network identity</span><b>{chain.chainId === CHAIN.id ? 'Confirmed' : 'Pending'}</b></div><div className="status-row"><span><i className="dot green" />Transfer activity</span><b>{indexed.transfers.length ? `${indexed.transfers.length} recent events` : 'Unavailable'}</b></div><div className="status-row"><span><i className="dot gray" />Fees / WETH rewards</span><b>Unavailable</b></div><div className="source-note">Sources: RPC for contract reads; Blockscout for indexed token metadata and transfers. Pool swaps, historical volume, rewards, and pool-derived economics remain unavailable until verified.{indexed.coverage && !indexed.coverage.coverageComplete7d ? ` Activity counts withheld because the snapshot reached only ${indexed.coverage.pagesFetched ?? 'a bounded number of'} page(s) and does not confirm 7-day coverage.` : ''}</div></section></div>
+    <div className="two-col"><Chart title="Transfer activity" subtitle={`Verified token transfers · paginated snapshot${indexed.snapshotStale ? ' · stale' : ''}`} activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><DataIntegrityPanel token={token} chain={chain} indexed={indexed} /></div>
     <div className="two-col"><section className="panel contract-panel"><div className="panel-head"><div><h2>Contracts</h2><p>Centralized, clickable configuration</p></div></div><div className="address-row"><span><label>HOODL TOKEN</label><code>{HOODL_TOKEN.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">↗</a></div><div className="address-row"><span><label>{CONFIGURED_POOL.poolType.toUpperCase()} POOL · {CONFIGURED_POOL.pair}</label><code>{CONFIGURED_POOL.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${CONFIGURED_POOL.address}`} target="_blank" rel="noreferrer">↗</a></div></section><section className="panel block-panel"><div className="panel-head"><div><h2>On-chain snapshot</h2><p>Freshness is shown, never implied</p></div><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'STALE' : 'LIVE'}</Badge></div><div className="snapshot"><span>Last updated <b>{updated ? new Date(updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</b></span><span>Contract deployed <b>{chain.deployed === null ? '—' : chain.deployed ? 'Yes' : 'No'}</b></span><span>Decimals <b>{token.decimals ?? '—'}</b></span></div></section></div>
   </>
 }
@@ -192,7 +234,7 @@ function TabContent({ tab, token, chain, poolV3, quote, swaps, indexed, updated 
 }
 
 function App() {
-  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [swaps, setSwaps] = useState<PoolSwap[]>([]); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [swaps, setSwaps] = useState<PoolSwap[]>([]); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, transfersSource: 'unavailable', holdersSource: 'unavailable', coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   async function load() {
     if (loadingRef.current) return

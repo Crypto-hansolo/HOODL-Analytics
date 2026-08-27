@@ -11,9 +11,13 @@ import type { BlockscoutHolder, BlockscoutTokenInfo, BlockscoutTransfer } from '
 export interface SnapshotCoverage {
   coverageComplete7d?: boolean
   pagesFetched?: number
+  maxPages?: number
   oldestTransferAt?: string | null
   note?: string
 }
+
+/** Which data source actually backs a field right now — never inferred, always traceable. */
+export type FieldSource = 'live' | 'snapshot' | 'unavailable'
 
 export interface Snapshot {
   generatedAt: string
@@ -36,6 +40,8 @@ export interface IndexedState {
   snapshotAt: string | null
   snapshotStale: boolean
   transfersStale: boolean
+  transfersSource: FieldSource
+  holdersSource: FieldSource
   coverage: SnapshotCoverage | null
   error: string | null
 }
@@ -59,17 +65,21 @@ export function mergeIndexedState(input: MergeIndexedStateInput): IndexedState {
   // to the transfer rows when those rows actually came from the snapshot fallback.
   const transfersStale = !usingLiveTransfers && snapshotStale
   const snapshotHolders = snapshot?.holders ?? []
+  const usingLiveHolders = holderRows.length > 0
+  const snapshotTransfers = snapshot?.transfers ?? []
   return {
     holders: info?.holdersCount ?? (snapshot?.holdersComplete && snapshotHolders.length ? snapshotHolders.length : null),
     priceUsd: info?.exchangeRateUsd ?? null,
     volume24h: info?.volume24h ?? null,
-    transfers: usingLiveTransfers ? liveTransfers : snapshot?.transfers ?? [],
+    transfers: usingLiveTransfers ? liveTransfers : snapshotTransfers,
     activity: snapshot?.activity ?? null,
     history: snapshot?.history ?? [],
-    holderRows: holderRows.length ? holderRows : snapshotHolders,
+    holderRows: usingLiveHolders ? holderRows : snapshotHolders,
     snapshotAt,
     snapshotStale,
     transfersStale,
+    transfersSource: usingLiveTransfers ? 'live' : snapshotTransfers.length ? 'snapshot' : 'unavailable',
+    holdersSource: usingLiveHolders ? 'live' : snapshotHolders.length ? 'snapshot' : 'unavailable',
     coverage: snapshot?.coverage ?? null,
     error: failureCount ? `${failureCount} indexed source${failureCount === 1 ? '' : 's'} unavailable` : null,
   }
