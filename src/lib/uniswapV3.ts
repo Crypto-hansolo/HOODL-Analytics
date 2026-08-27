@@ -127,6 +127,42 @@ function toField<T>(result: PromiseSettledResult<T>): PoolV3Field<T> {
   }
 }
 
+export interface SpotQuoteInputs {
+  poolV3: PoolV3Data
+  hoodlAddress: string
+  symbol0: string | null
+  symbol1: string | null
+  decimals0: number
+  decimals1: number
+}
+
+// Pure derivation of the WETH/HOODL spot price from already-fetched pool
+// data and token metadata. Does no I/O itself — callers fetch poolV3 fields
+// and the token0/token1 symbols/decimals, then hand them in here. Any
+// validation failure is caught and reported as an 'unavailable' quote rather
+// than thrown, matching how callers previously handled this inline.
+export function computeSpotQuote({ poolV3, hoodlAddress, symbol0, symbol1, decimals0, decimals1 }: SpotQuoteInputs): PoolSpotQuote {
+  try {
+    const token0 = poolV3.token0.value
+    const token1 = poolV3.token1.value
+    const slot0 = poolV3.slot0.value
+    if (poolV3.token0.status !== 'on-chain' || poolV3.token1.status !== 'on-chain' || poolV3.slot0.status !== 'on-chain' || !token0 || !token1 || !slot0) {
+      throw new Error('Pool identity or slot0 unavailable')
+    }
+    const isHoodl0 = token0.toLowerCase() === hoodlAddress.toLowerCase() && symbol1?.toUpperCase() === 'WETH'
+    const isHoodl1 = token1.toLowerCase() === hoodlAddress.toLowerCase() && symbol0?.toUpperCase() === 'WETH'
+    if ((!isHoodl0 && !isHoodl1) || !symbol0 || !symbol1 || slot0.sqrtPriceX96 === 0n) {
+      throw new Error('Pool is not verified as HOODL/WETH')
+    }
+    const rawToken1PerToken0 = (Number(slot0.sqrtPriceX96) ** 2 / 2 ** 192) * 10 ** (decimals0 - decimals1)
+    const wethPerHoodl = isHoodl0 ? rawToken1PerToken0 : 1 / rawToken1PerToken0
+    if (!Number.isFinite(wethPerHoodl)) throw new Error('Derived spot price is not finite')
+    return { status: 'on-chain', wethPerHoodl, token0Symbol: symbol0, token1Symbol: symbol1, error: null }
+  } catch (err) {
+    return { status: 'unavailable', wethPerHoodl: null, token0Symbol: null, token1Symbol: null, error: err instanceof Error ? err.message : 'Pool quote unavailable' }
+  }
+}
+
 // Fetches every pool field independently (Promise.allSettled) so a revert or
 // CORS block on one call never hides fields that did succeed — each field
 // carries its own on-chain/unavailable status instead of an all-or-nothing result.

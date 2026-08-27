@@ -5,7 +5,7 @@ import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, STALE_AFTER_MS } from './config'
 import { erc20BalanceOf, erc20Decimals, erc20Name, erc20Symbol, erc20TotalSupply } from './lib/erc20'
 import { ethBlockNumber, ethChainId, ethGetCode, RpcError } from './lib/rpc'
 import { formatCompactUnits, formatInteger, formatUnits, isValidAddress, truncateAddress } from './lib/format'
-import { fetchPoolV3Data } from './lib/uniswapV3'
+import { computeSpotQuote, fetchPoolV3Data } from './lib/uniswapV3'
 import { getTokenHolders, getTokenInfo, getTokenTransfers } from './lib/blockscout'
 import type { PoolSpotQuote, PoolV3Data, PoolV3Field } from './lib/uniswapV3'
 import type { BlockscoutHolder } from './lib/blockscout'
@@ -196,13 +196,7 @@ function App() {
       const token0 = livePool.token0.value; const token1 = livePool.token1.value; const slot0 = livePool.slot0.value
       if (livePool.token0.status !== 'on-chain' || livePool.token1.status !== 'on-chain' || livePool.slot0.status !== 'on-chain' || !token0 || !token1 || !slot0) throw new Error('Pool identity or slot0 unavailable')
       const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([erc20Symbol(token0), erc20Symbol(token1), erc20Decimals(token0), erc20Decimals(token1)])
-      const isHoodl0 = token0.toLowerCase() === HOODL_TOKEN.address.toLowerCase() && symbol1?.toUpperCase() === 'WETH'
-      const isHoodl1 = token1.toLowerCase() === HOODL_TOKEN.address.toLowerCase() && symbol0?.toUpperCase() === 'WETH'
-      if ((!isHoodl0 && !isHoodl1) || !symbol0 || !symbol1 || slot0.sqrtPriceX96 === 0n) throw new Error('Pool is not verified as HOODL/WETH')
-      const rawToken1PerToken0 = Number(slot0.sqrtPriceX96) ** 2 / 2 ** 192 * 10 ** (decimals0 - decimals1)
-      const wethPerHoodl = isHoodl0 ? rawToken1PerToken0 : 1 / rawToken1PerToken0
-      if (!Number.isFinite(wethPerHoodl)) throw new Error('Derived spot price is not finite')
-      setQuote({ status: 'on-chain', wethPerHoodl, token0Symbol: symbol0, token1Symbol: symbol1, error: null })
+      setQuote(computeSpotQuote({ poolV3: livePool, hoodlAddress: HOODL_TOKEN.address, symbol0, symbol1, decimals0, decimals1 }))
     } catch (err) { setQuote({ status: 'unavailable', wethPerHoodl: null, token0Symbol: null, token1Symbol: null, error: err instanceof Error ? err.message : 'Pool quote unavailable' }) }
     setUpdated(Date.now())
     setLoading(false)
