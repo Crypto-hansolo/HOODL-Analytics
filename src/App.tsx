@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { CHAIN, CONFIGURED_POOL, HOODL_TOKEN, STALE_AFTER_MS } from './config'
@@ -161,7 +161,10 @@ function TabContent({ tab, token, chain, poolV3, quote, indexed, updated }: { ta
 
 function App() {
   const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
+  const loadingRef = useRef(false)
   async function load() {
+    if (loadingRef.current) return
+    loadingRef.current = true
     setLoading(true)
     try {
       const [name, symbol, decimals, supply] = await Promise.all([erc20Name(HOODL_TOKEN.address), erc20Symbol(HOODL_TOKEN.address), erc20Decimals(HOODL_TOKEN.address), erc20TotalSupply(HOODL_TOKEN.address)])
@@ -201,9 +204,11 @@ function App() {
       if (!Number.isFinite(wethPerHoodl)) throw new Error('Derived spot price is not finite')
       setQuote({ status: 'on-chain', wethPerHoodl, token0Symbol: symbol0, token1Symbol: symbol1, error: null })
     } catch (err) { setQuote({ status: 'unavailable', wethPerHoodl: null, token0Symbol: null, token1Symbol: null, error: err instanceof Error ? err.message : 'Pool quote unavailable' }) }
-    setUpdated(Date.now()); setLoading(false)
+    setUpdated(Date.now())
+    setLoading(false)
+    loadingRef.current = false
   }
-  useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 30_000); const clock = window.setInterval(() => setNow(Date.now()), 1_000); return () => { window.clearInterval(timer); window.clearInterval(clock) } }, [])
+  useEffect(() => { const kickoff = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => void load(), 30_000); const clock = window.setInterval(() => setNow(Date.now()), 1_000); return () => { window.clearTimeout(kickoff); window.clearInterval(timer); window.clearInterval(clock) } }, [])
   const stale = updated === 0 || now - updated > STALE_AFTER_MS
   const chainMatches = chain.chainId === CHAIN.id
   const connectionLabel = loading && updated === 0 ? 'Connecting…' : stale || chain.error || !chainMatches ? 'Check connection' : 'Live connection'
