@@ -12,6 +12,8 @@ import type { BlockscoutHolder } from './lib/blockscout'
 import { RANGE_KEYS, selectRange } from './lib/historyRange'
 import type { ActivityCounts, HistoryDay, RangeKey } from './lib/historyRange'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { getRecentPoolSwaps } from './lib/poolSwaps'
+import type { PoolSwap } from './lib/poolSwaps'
 
 type Tab = 'Overview' | 'Trading' | 'Fees & Rewards' | 'Pools' | 'Holders'
 type ChainState = { chainId: number | null; block: bigint | null; deployed: boolean | null; error: string | null }
@@ -62,6 +64,18 @@ function formatFeeTier(fee: number): string {
 function formatSpotQuote(quote: PoolSpotQuote | null): string {
   if (!quote || quote.status !== 'on-chain' || quote.wethPerHoodl === null || !Number.isFinite(quote.wethPerHoodl)) return '—'
   return quote.wethPerHoodl.toLocaleString('en-US', { maximumSignificantDigits: 8 })
+}
+
+function swapVolume(swaps: PoolSwap[], pool: PoolV3Data | null, decimals: number | null): string {
+  const token0 = pool?.token0.value?.toLowerCase()
+  const token1 = pool?.token1.value?.toLowerCase()
+  const hoodlIs0 = token0 === HOODL_TOKEN.address.toLowerCase()
+  if (!swaps.length || (!hoodlIs0 && token1 !== HOODL_TOKEN.address.toLowerCase()) || decimals === null) return '—'
+  const total = swaps.reduce((sum, swap) => {
+    const amount = hoodlIs0 ? swap.amount0 : swap.amount1
+    return sum + (amount < 0n ? -amount : amount)
+  }, 0n)
+  return `${formatUnits(total, decimals)} HOODL`
 }
 
 function PoolV3Metric<T>({ label, field, render }: { label: string; field: PoolV3Field<T>; render: (value: T) => string }) {
@@ -117,7 +131,7 @@ function WalletLookup() {
   return <section className="panel wallet"><div className="panel-head"><div><h2>Wallet lookup</h2><p>Public read-only balanceOf() query</p></div><Badge tone="live">ON-CHAIN</Badge></div><form onSubmit={submit}><input value={address} onChange={e => setAddress(e.target.value)} placeholder="0x wallet address" spellCheck={false} /><button disabled={busy}>{busy ? 'Reading…' : 'Query balance ↗'}</button></form>{error && <p className="form-error">{error}</p>}{result && <div className="wallet-result"><span>HOODL balance</span><b>{result}</b><code>{truncateAddress(address)}</code></div>}</section>
 }
 
-function PoolsTab({ poolV3, quote }: { poolV3: PoolV3Data | null; quote: PoolSpotQuote | null }) {
+function PoolsTab({ poolV3, quote, swaps, decimals }: { poolV3: PoolV3Data | null; quote: PoolSpotQuote | null; swaps: PoolSwap[]; decimals: number | null }) {
   const anyOnChain = poolV3 ? Object.values(poolV3).some((f) => f.status === 'on-chain') : false
   return <>
     <section className="panel pool-card">
@@ -146,7 +160,7 @@ function PoolsTab({ poolV3, quote }: { poolV3: PoolV3Data | null; quote: PoolSpo
       </div>
       <div className="source-note">token0/token1 order, fee tier, tick spacing, liquidity, and slot0 are read directly from the pool contract. Which token is WETH is not assumed here — verify via the addresses above. No price, TVL, volume, or reward figures are derived from these raw values.</div>
     </section>
-    <EmptyState title="Pool price, TVL, volume, and rewards unavailable" body="Computing price/TVL from sqrtPriceX96 requires confirmed decimals for both pool tokens, and volume/fees/rewards require an indexed event history. None of these are fabricated." todo="Confirm token1 decimals and connect a verified swap-event indexer to enable these calculations." />
+    {swaps.length ? <section className="panel"><div className="panel-head"><div><h2>Verified swap activity</h2><p>Direct RPC logs · bounded 50,000-block window</p></div><Badge tone="live">INDEXED</Badge></div><div className="metrics" style={{ marginTop: 20 }}><Metric label="Swap events" value={formatInteger(swaps.length)} source="Indexed" /><Metric label="Unique senders" value={formatInteger(new Set(swaps.map((swap) => swap.sender.toLowerCase())).size)} source="Calculated" /><Metric label="HOODL volume" value={swapVolume(swaps, poolV3, decimals)} source={decimals !== null ? 'Calculated' : 'Unavailable'} error={decimals !== null ? null : 'Token decimals unavailable'} /></div><div className="source-note">Events are decoded from the configured pool's canonical Uniswap V3 Swap topic via eth_getLogs. This is a bounded event count, not lifetime volume; malformed logs are excluded.</div></section> : <EmptyState title="Pool price, TVL, volume, and rewards unavailable" body="No verified Swap events were returned by the direct RPC query. Nothing is inferred from transfers or raw pool state." todo="Retry the direct pool log query. Fees and rewards still require verified event semantics and a reward contract." />}
   </>
 }
 
@@ -171,17 +185,17 @@ function TransferActivity({ transfers, decimals, stale, error }: { transfers: Aw
   return <section className="panel transfer-panel"><div className="panel-head"><div><h2>Recent token transfers</h2><p>Verified HOODL ERC-20 transfers · {stale ? 'snapshot may be stale' : 'live endpoint or repository snapshot'}</p></div><Badge tone={stale ? 'warn' : 'live'}>{stale ? 'STALE' : 'INDEXED'}</Badge></div><div className="transfer-table" role="table" aria-label="Recent HOODL token transfers"><div className="transfer-row transfer-head" role="row"><span>Time</span><span>From → To</span><span>Amount</span><span>Block</span></div>{transfers.map((transfer, index) => <div className="transfer-row" role="row" key={`${transfer.hash}-${transfer.from}-${transfer.to}-${index}`}><span>{transfer.timestamp ? new Date(transfer.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}</span><span className="transfer-route"><a href={`${CHAIN.explorerUrl}/address/${transfer.from}`} target="_blank" rel="noreferrer">{truncateAddress(transfer.from)}</a><b>→</b><a href={`${CHAIN.explorerUrl}/address/${transfer.to}`} target="_blank" rel="noreferrer">{truncateAddress(transfer.to)}</a><a className="tx-link" href={`${CHAIN.explorerUrl}/tx/${transfer.hash}`} target="_blank" rel="noreferrer">tx ↗</a></span><span className="transfer-amount">{decimals !== null ? formatUnits(BigInt(transfer.value), decimals) : '—'} HOODL</span><span>{transfer.blockNumber !== null ? formatInteger(transfer.blockNumber) : '—'}</span></div>)}</div><div className="source-note">Rows are token transfers, not swaps. Amounts are formatted from the on-chain token units; no trading volume or fee value is inferred. Source failures are shown as unavailable rather than replaced with estimates.</div></section>
 }
 
-function TabContent({ tab, token, chain, poolV3, quote, indexed, updated }: { tab: Tab; token: TokenState; chain: ChainState; poolV3: PoolV3Data | null; quote: PoolSpotQuote | null; indexed: IndexedState; updated: number }) {
+function TabContent({ tab, token, chain, poolV3, quote, swaps, indexed, updated }: { tab: Tab; token: TokenState; chain: ChainState; poolV3: PoolV3Data | null; quote: PoolSpotQuote | null; swaps: PoolSwap[]; indexed: IndexedState; updated: number }) {
   if (tab === 'Overview') return <Overview token={token} chain={chain} indexed={indexed} updated={updated} />
   if (tab === 'Holders') return <HoldersTab indexed={indexed} token={token} />
-  if (tab === 'Pools') return <PoolsTab poolV3={poolV3} quote={quote} />
-  if (tab === 'Trading') return <><div className="metrics"><Metric label="Verified transfers" value={indexed.transfers.length ? formatInteger(indexed.transfers.length) : '—'} source={indexed.transfers.length ? 'Indexed' : 'Unavailable'} error={indexed.transfers.length ? null : indexed.error} /><Metric label="24h activity" value={indexed.activity ? formatInteger(indexed.activity.transfers24h) : '—'} source={indexed.activity ? 'Calculated' : 'Unavailable'} error={indexed.activity ? null : indexed.error} /><Metric label="Total volume" value="—" /><Metric label="Unique traders" value="—" /></div><Chart title="Transfer activity" subtitle="Verified token transfers · bounded source coverage" activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><TransferActivity transfers={indexed.transfers} decimals={token.decimals} stale={indexed.transfersStale} error={indexed.error} /></>
+  if (tab === 'Pools') return <PoolsTab poolV3={poolV3} quote={quote} swaps={swaps} decimals={token.decimals} />
+  if (tab === 'Trading') return <><div className="metrics"><Metric label="Swap events" value={swaps.length ? formatInteger(swaps.length) : '—'} source={swaps.length ? 'Indexed' : 'Unavailable'} error={swaps.length ? null : 'Direct pool log query returned no verified events'} /><Metric label="Verified transfers" value={indexed.transfers.length ? formatInteger(indexed.transfers.length) : '—'} source={indexed.transfers.length ? 'Indexed' : 'Unavailable'} error={indexed.transfers.length ? null : indexed.error} /><Metric label="HOODL volume" value={swapVolume(swaps, poolV3, token.decimals)} source={swaps.length && token.decimals !== null ? 'Calculated' : 'Unavailable'} error={swaps.length && token.decimals !== null ? null : 'Bounded pool swap volume unavailable'} /><Metric label="Unique traders" value={swaps.length ? formatInteger(new Set(swaps.map((swap) => swap.sender.toLowerCase())).size) : '—'} source={swaps.length ? 'Calculated' : 'Unavailable'} /></div><Chart title="Transfer activity" subtitle="Verified token transfers · bounded source coverage" activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><TransferActivity transfers={indexed.transfers} decimals={token.decimals} stale={indexed.transfersStale} error={indexed.error} /></>
   const title = 'Fees & rewards'
   return <><div className="metrics"><Metric label="Total volume" value="—" /><Metric label="Generated fees" value="—" /><Metric label="WETH distributed" value="—" /><Metric label="Distribution efficiency" value="—" /></div><Chart title={title} subtitle="Historical values will appear after verified indexing" /><EmptyState title={`${title} data unavailable`} body="No unverified DEX, fee, reward, or volume values are displayed." todo="Connect a verified pool-event indexer and document the event semantics before enabling calculations." /></>
 }
 
 function App() {
-  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState<Tab>('Overview'); const [token, setToken] = useState<TokenState>({ name: null, symbol: null, decimals: null, supply: null, error: null }); const [chain, setChain] = useState<ChainState>({ chainId: null, block: null, deployed: null, error: null }); const [poolV3, setPoolV3] = useState<PoolV3Data | null>(null); const [quote, setQuote] = useState<PoolSpotQuote | null>(null); const [swaps, setSwaps] = useState<PoolSwap[]>([]); const [indexed, setIndexed] = useState<IndexedState>({ holders: null, priceUsd: null, volume24h: null, transfers: [], activity: null, history: [], holderRows: [], snapshotAt: null, snapshotStale: false, transfersStale: false, coverage: null, error: null }); const [updated, setUpdated] = useState(0); const [now, setNow] = useState(0); const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   async function load() {
     if (loadingRef.current) return
@@ -213,8 +227,9 @@ function App() {
       setIndexed({ holders: info?.holdersCount ?? (snapshot?.holdersComplete && snapshotHolders.length ? snapshotHolders.length : null), priceUsd: info?.exchangeRateUsd ?? null, volume24h: info?.volume24h ?? null, transfers: usingLiveTransfers ? liveTransfers : snapshot?.transfers ?? [], activity: snapshot?.activity ?? null, history: snapshot?.history ?? [], holderRows: holderRows.length ? holderRows : snapshotHolders, snapshotAt, snapshotStale, transfersStale, coverage: snapshot?.coverage ?? null, error: failures.length ? `${failures.length} indexed source${failures.length === 1 ? '' : 's'} unavailable` : null })
     } catch (err) { setIndexed(v => ({ ...v, error: err instanceof Error ? err.message : 'Blockscout unavailable' })) }
     try {
-      const livePool = await fetchPoolV3Data(CONFIGURED_POOL.address)
+      const [livePool, liveSwaps] = await Promise.all([fetchPoolV3Data(CONFIGURED_POOL.address), getRecentPoolSwaps()])
       setPoolV3(livePool)
+      setSwaps(liveSwaps)
       const token0 = livePool.token0.value; const token1 = livePool.token1.value; const slot0 = livePool.slot0.value
       if (livePool.token0.status !== 'on-chain' || livePool.token1.status !== 'on-chain' || livePool.slot0.status !== 'on-chain' || !token0 || !token1 || !slot0) throw new Error('Pool identity or slot0 unavailable')
       const [symbol0, symbol1, decimals0, decimals1] = await Promise.all([erc20Symbol(token0), erc20Symbol(token1), erc20Decimals(token0), erc20Decimals(token1)])
@@ -228,7 +243,7 @@ function App() {
   const stale = updated === 0 || now - updated > STALE_AFTER_MS
   const chainMatches = chain.chainId === CHAIN.id
   const connectionLabel = loading && updated === 0 ? 'Connecting…' : stale || chain.error || !chainMatches ? 'Check connection' : 'Live connection'
-  return <div className="app-shell"><aside><div className="brand"><span className="brand-mark">H</span><span>HOODL <small>TERMINAL</small></span></div><div className="side-label">ANALYTICS</div><nav>{tabs.map(item => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}><span className="nav-icon">{['◈', '⌁', '◌', '◇', '◎'][tabs.indexOf(item)]}</span>{item}</button>)}</nav><div className="side-bottom"><div className="connection"><i className={stale || chain.error || !chainMatches ? 'offline' : ''} />{connectionLabel}<small>Robinhood Chain · {CHAIN.id}</small></div><a href="https://github.com/Crypto-hansolo/HOODL-Analytics" target="_blank" rel="noreferrer">GitHub repository ↗</a></div></aside><main><header><div><span className="breadcrumb">HOODL / <b>{tab.toUpperCase()}</b></span><h2>{tab === 'Overview' ? 'Token intelligence, without the noise.' : tab}</h2></div><div className="header-actions"><Badge tone={chain.error || !chainMatches ? 'warn' : 'live'}>{loading && updated === 0 ? 'CONNECTING' : chain.error || !chainMatches ? 'CHECK RPC' : 'READ-ONLY'}</Badge><button className="refresh" disabled={loading} onClick={() => void load()} aria-label="Refresh live data">{loading ? '↻ Updating…' : '↻ Refresh'}</button></div></header><div className="content"><LoadingBanner loading={loading} updated={updated} /><ErrorBoundary key={tab}><TabContent tab={tab} token={token} chain={chain} poolV3={poolV3} quote={quote} indexed={indexed} updated={updated} /></ErrorBoundary></div><footer><span>HOODL ANALYTICS · DATA INTEGRITY FIRST</span><span>Last refresh {updated ? new Date(updated).toLocaleTimeString() : 'pending'}</span></footer></main></div>
+  return <div className="app-shell"><aside><div className="brand"><span className="brand-mark">H</span><span>HOODL <small>TERMINAL</small></span></div><div className="side-label">ANALYTICS</div><nav>{tabs.map(item => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}><span className="nav-icon">{['◈', '⌁', '◌', '◇', '◎'][tabs.indexOf(item)]}</span>{item}</button>)}</nav><div className="side-bottom"><div className="connection"><i className={stale || chain.error || !chainMatches ? 'offline' : ''} />{connectionLabel}<small>Robinhood Chain · {CHAIN.id}</small></div><a href="https://github.com/Crypto-hansolo/HOODL-Analytics" target="_blank" rel="noreferrer">GitHub repository ↗</a></div></aside><main><header><div><span className="breadcrumb">HOODL / <b>{tab.toUpperCase()}</b></span><h2>{tab === 'Overview' ? 'Token intelligence, without the noise.' : tab}</h2></div><div className="header-actions"><Badge tone={chain.error || !chainMatches ? 'warn' : 'live'}>{loading && updated === 0 ? 'CONNECTING' : chain.error || !chainMatches ? 'CHECK RPC' : 'READ-ONLY'}</Badge><button className="refresh" disabled={loading} onClick={() => void load()} aria-label="Refresh live data">{loading ? '↻ Updating…' : '↻ Refresh'}</button></div></header><div className="content"><LoadingBanner loading={loading} updated={updated} /><ErrorBoundary key={tab}><TabContent tab={tab} token={token} chain={chain} poolV3={poolV3} quote={quote} swaps={swaps} indexed={indexed} updated={updated} /></ErrorBoundary></div><footer><span>HOODL ANALYTICS · DATA INTEGRITY FIRST</span><span>Last refresh {updated ? new Date(updated).toLocaleTimeString() : 'pending'}</span></footer></main></div>
 }
 
 export default App
