@@ -22,6 +22,9 @@ async function rpcCall<T>(method: string, params: unknown[]): Promise<T> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: ++requestId, method, params }),
       signal: controller.signal,
+      // Every call here is a live read against a 30s poll loop — a cached
+      // response would silently show stale chain state as current.
+      cache: 'no-store',
     })
     if (!res.ok) {
       throw new RpcError(`RPC HTTP ${res.status}`)

@@ -22,7 +22,10 @@ type IndexedState = { holders: number | null; priceUsd: string | null; volume24h
 type Snapshot = { generatedAt: string; transfers: Awaited<ReturnType<typeof getTokenTransfers>>; holders?: BlockscoutHolder[]; holdersComplete?: boolean; activity?: ActivityCounts; history?: HistoryDay[]; coverage?: SnapshotCoverage }
 
 async function getSnapshot(): Promise<Snapshot> {
-  const response = await fetch(`${import.meta.env.BASE_URL}data/snapshot.json`)
+  // The snapshot is polled on the same 30s loop as live RPC/Blockscout
+  // reads; a cached response would silently show a stale generatedAt as
+  // freshly checked instead of correctly flagging it stale.
+  const response = await fetch(`${import.meta.env.BASE_URL}data/snapshot.json`, { cache: 'no-store' })
   if (!response.ok) throw new Error(`Snapshot HTTP ${response.status}`)
   return response.json() as Promise<Snapshot>
 }

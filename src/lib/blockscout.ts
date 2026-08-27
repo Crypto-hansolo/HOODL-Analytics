@@ -20,6 +20,9 @@ async function getJson<T>(path: string): Promise<T> {
     const res = await fetch(`${CHAIN.blockscoutApiBase}${path}`, {
       headers: { Accept: 'application/json' },
       signal: controller.signal,
+      // This is polled on the same 30s loop as RPC reads — a cached response
+      // would silently show stale indexed data as freshly verified.
+      cache: 'no-store',
     })
     if (!res.ok) {
       throw new BlockscoutError(`Blockscout HTTP ${res.status}`)
