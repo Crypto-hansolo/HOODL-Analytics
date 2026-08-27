@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-08-27T04:32:04.647Z",
+  "schemaVersion": 3,
+  "generatedAt": "2026-08-27T06:41:04.314Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -13,10 +13,90 @@
     "pagesFetched": 9,
     "maxPages": 20,
     "coverageComplete7d": true,
-    "oldestTransferAt": "2026-08-19T15:08:23.000000Z",
+    "oldestTransferAt": "2026-08-19T15:13:29.000000Z",
     "note": "Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers."
   },
   "transfers": [
+    {
+      "hash": "0x9bf139bb60ca0eb89fed409515d9ddf3cb45678989887d2ce764248ad36d21f0",
+      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:29:47.000000Z",
+      "blockNumber": 47193796
+    },
+    {
+      "hash": "0x9bf139bb60ca0eb89fed409515d9ddf3cb45678989887d2ce764248ad36d21f0",
+      "from": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
+      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:29:47.000000Z",
+      "blockNumber": 47193796
+    },
+    {
+      "hash": "0x3363f09265bed0f113d25c0c98e7fcc891b77a8b9a75abd6f5ebaacbebcc5989",
+      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:29:24.000000Z",
+      "blockNumber": 47193567
+    },
+    {
+      "hash": "0x3363f09265bed0f113d25c0c98e7fcc891b77a8b9a75abd6f5ebaacbebcc5989",
+      "from": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
+      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:29:24.000000Z",
+      "blockNumber": 47193567
+    },
+    {
+      "hash": "0xb07976f3eee1185808b744eac260c8ab6ad3ea2e5842f8ba0ac75327c19a6f26",
+      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:29:06.000000Z",
+      "blockNumber": 47193387
+    },
+    {
+      "hash": "0xb07976f3eee1185808b744eac260c8ab6ad3ea2e5842f8ba0ac75327c19a6f26",
+      "from": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
+      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:29:06.000000Z",
+      "blockNumber": 47193387
+    },
+    {
+      "hash": "0x85e04d05b1fb82f6a4bee8755678491285401c57be6be1c503f2687b9f49b127",
+      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:28:43.000000Z",
+      "blockNumber": 47193161
+    },
+    {
+      "hash": "0x85e04d05b1fb82f6a4bee8755678491285401c57be6be1c503f2687b9f49b127",
+      "from": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
+      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:28:43.000000Z",
+      "blockNumber": 47193161
+    },
+    {
+      "hash": "0x756168e0d3dd0e9f431c4d32dba8d353ffbd27e879182df2e7acda28e8873646",
+      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:28:22.000000Z",
+      "blockNumber": 47192956
+    },
+    {
+      "hash": "0x756168e0d3dd0e9f431c4d32dba8d353ffbd27e879182df2e7acda28e8873646",
+      "from": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
+      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
+      "value": "200000000000000",
+      "timestamp": "2026-08-27T05:28:22.000000Z",
+      "blockNumber": 47192956
+    },
     {
       "hash": "0xe3d58653f5cbfdc0f44b420b7db894e7e2408a9659408992ca41b25f67cbc366",
       "from": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
@@ -3536,91 +3616,468 @@
       "value": "78146028708",
       "timestamp": "2026-08-19T15:13:29.000000Z",
       "blockNumber": 40657461
-    },
-    {
-      "hash": "0xe26ad787db3dc864e7a9114adc6959b1f0f34902b78286872a7ff9f63d69f81c",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
-      "value": "78146028708",
-      "timestamp": "2026-08-19T15:13:29.000000Z",
-      "blockNumber": 40657461
-    },
-    {
-      "hash": "0x599e9b7a059b17f3696b570576009a2ad8e169c065a3391f6067a15b13605b27",
-      "from": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
-      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "9479967909744",
-      "timestamp": "2026-08-19T15:10:15.000000Z",
-      "blockNumber": 40655518
-    },
-    {
-      "hash": "0x599e9b7a059b17f3696b570576009a2ad8e169c065a3391f6067a15b13605b27",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
-      "value": "9479967909744",
-      "timestamp": "2026-08-19T15:10:15.000000Z",
-      "blockNumber": 40655518
-    },
-    {
-      "hash": "0xca9a14b99ca73b9516a047f433b2f6db9f38803dcf53f5e41701e4f67de0bb9b",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
-      "value": "400000000000000",
-      "timestamp": "2026-08-19T15:09:25.000000Z",
-      "blockNumber": 40655018
-    },
-    {
-      "hash": "0xca9a14b99ca73b9516a047f433b2f6db9f38803dcf53f5e41701e4f67de0bb9b",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "value": "400000000000000",
-      "timestamp": "2026-08-19T15:09:25.000000Z",
-      "blockNumber": 40655018
-    },
-    {
-      "hash": "0xd5e651af03ca747579d114d92ef5548953f326b0c5be05639f447637f2ddf8b5",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "400000000000000",
-      "timestamp": "2026-08-19T15:09:05.000000Z",
-      "blockNumber": 40654821
-    },
-    {
-      "hash": "0xd5e651af03ca747579d114d92ef5548953f326b0c5be05639f447637f2ddf8b5",
-      "from": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
-      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "value": "400000000000000",
-      "timestamp": "2026-08-19T15:09:05.000000Z",
-      "blockNumber": 40654821
-    },
-    {
-      "hash": "0x76d826e18b841b39a8a543153b5b30f39329509fc2e054305d02364ce82e7d74",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
-      "value": "350000000000000",
-      "timestamp": "2026-08-19T15:08:46.000000Z",
-      "blockNumber": 40654628
-    },
-    {
-      "hash": "0x76d826e18b841b39a8a543153b5b30f39329509fc2e054305d02364ce82e7d74",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "value": "350000000000000",
-      "timestamp": "2026-08-19T15:08:46.000000Z",
-      "blockNumber": 40654628
-    },
-    {
-      "hash": "0x575255b97af6bae44089a9804d8c76506543cf4d055337aae3ed0e505a401497",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "400000000000000",
-      "timestamp": "2026-08-19T15:08:23.000000Z",
-      "blockNumber": 40654406
     }
   ],
   "activity": {
     "transfers1h": 0,
-    "transfers24h": 8,
-    "transfers7d": 410
-  }
+    "transfers24h": 18,
+    "transfers7d": 401
+  },
+  "history": [
+    {
+      "date": "2026-08-21",
+      "transferCount": 38
+    },
+    {
+      "date": "2026-08-22",
+      "transferCount": 36
+    },
+    {
+      "date": "2026-08-23",
+      "transferCount": 33
+    },
+    {
+      "date": "2026-08-24",
+      "transferCount": 38
+    },
+    {
+      "date": "2026-08-25",
+      "transferCount": 22
+    },
+    {
+      "date": "2026-08-26",
+      "transferCount": 3
+    }
+  ],
+  "holders": [
+    {
+      "address": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "195110656715169225"
+    },
+    {
+      "address": "0x0aCAa523dE2CC88CD17dD23714a42F3d5a912ad0",
+      "value": "180000013272045803"
+    },
+    {
+      "address": "0xB12c7Fd6FB7E814Ec4485bB0b4B51e170f9689eb",
+      "value": "69471993601946514"
+    },
+    {
+      "address": "0x7D4b38895aCbD0b36e3E4952944e577F6785e1C6",
+      "value": "63000000887124114"
+    },
+    {
+      "address": "0x75F05DF49358eFAC50d68955d8D888f73Fe8D13A",
+      "value": "60000000201477232"
+    },
+    {
+      "address": "0x5c351ec169f98beED8fb2913Cf4Cca110d332383",
+      "value": "59919572554175216"
+    },
+    {
+      "address": "0xFB968Ac4D1614B5e49021456D77FAe7BBc043fD9",
+      "value": "50000000000000000"
+    },
+    {
+      "address": "0x972b894b6C9DA000Feb07FF2a6ae39aBF1Bc6A75",
+      "value": "44250000009627226"
+    },
+    {
+      "address": "0x5135B4f52c5820C75DB01Ad727b08dA7eCC0Df6d",
+      "value": "39000000000000000"
+    },
+    {
+      "address": "0xb36495ED2640005dB6f760b64138F7C53414e1D3",
+      "value": "31382622728160735"
+    },
+    {
+      "address": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
+      "value": "25404703524226649"
+    },
+    {
+      "address": "0x6E8f374837d730494E21EFD7dAF5b815D5Ec9931",
+      "value": "25000000000000000"
+    },
+    {
+      "address": "0x56F0Afac00A0c014C03F318d15fD77f64CDa9D96",
+      "value": "25000000000000000"
+    },
+    {
+      "address": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
+      "value": "16631714601705312"
+    },
+    {
+      "address": "0xe3A4046509D961237329b4aa03F3E15D71fd6a7A",
+      "value": "15892808811154823"
+    },
+    {
+      "address": "0x5A4bC07128a4425464ef8F84ae7c97509D70e6EF",
+      "value": "13138265289177107"
+    },
+    {
+      "address": "0x47C5599A5f0aD707BB70101D1FbD463EF93dF5a0",
+      "value": "11106827041081423"
+    },
+    {
+      "address": "0x4BEEe88C0D2A511fa9b60226Dfc53d8e86fc99f1",
+      "value": "10999999999951645"
+    },
+    {
+      "address": "0x10337523fE988d6ce28B0Bd65c4Cc6dd34E39c1D",
+      "value": "10982987131938541"
+    },
+    {
+      "address": "0x49438b52DfD36f5dB625C0FF1350b932ba2A0f60",
+      "value": "10660690923657316"
+    },
+    {
+      "address": "0xC928620f0Aae35374794729C3e89D02ecc9faCf2",
+      "value": "10011725792665473"
+    },
+    {
+      "address": "0x9A27d3D9d84A20180546E62dF7Ea5c895696fF4F",
+      "value": "10000000000000000"
+    },
+    {
+      "address": "0x2B8b37DD17Fa67833B01E30229502169D1a8AE40",
+      "value": "8138017449883068"
+    },
+    {
+      "address": "0xeb1Bd9B64A240c537408Ee1f21aA7FACDf7c923f",
+      "value": "5024013424633472"
+    },
+    {
+      "address": "0xb6157454C988390e003AC2b078763745DC865c8E",
+      "value": "2000000282791554"
+    },
+    {
+      "address": "0xDe9a9075692Ec36a5E7bDE220AC623E8b1ed53A6",
+      "value": "1176600000000000"
+    },
+    {
+      "address": "0x78c2964b2e382765da32021B2ec79Da721621625",
+      "value": "1056367889522764"
+    },
+    {
+      "address": "0xF8Ed3A12832b106b0EDc947b007C64439Ad74402",
+      "value": "1054816266953591"
+    },
+    {
+      "address": "0x05124996a5B65cd77C579Ee69936574246cf149a",
+      "value": "505193879279886"
+    },
+    {
+      "address": "0x1D6552ce37030Bf5113EB116a29f0340a1B61756",
+      "value": "500000971886207"
+    },
+    {
+      "address": "0x0e331a293BB22e93e2e5E417d84d755ae185dA02",
+      "value": "447005440164189"
+    },
+    {
+      "address": "0x69B623d036E2f0bCD4d1fec7ebCeAF0250a28196",
+      "value": "212253108088428"
+    },
+    {
+      "address": "0xd6AA78f61a4D5Ce462BA11B4E0637661dA08fb76",
+      "value": "207940000000000"
+    },
+    {
+      "address": "0xB6360fB29DDF125Db53c9BeFcfE8C0F1dFb55D79",
+      "value": "204649000000000"
+    },
+    {
+      "address": "0x5750Ae7fa66C6427a1377A72D300351ccC2A06f7",
+      "value": "147697000000000"
+    },
+    {
+      "address": "0x165c1F95d7537F199c0948f51Bbd6F3C93391d9D",
+      "value": "136051573230027"
+    },
+    {
+      "address": "0xe33d129Cf8B89135832a9912E3EA29042B97295f",
+      "value": "133997000000000"
+    },
+    {
+      "address": "0xDeead8b0D4f68CDf55392316514A2146747a3960",
+      "value": "111000000000000"
+    },
+    {
+      "address": "0x34BA7Dcc4691B80be3CCA15cc532b03d51De51D6",
+      "value": "105970000000000"
+    },
+    {
+      "address": "0x552C9375dE2fb84872316593Efa88130FA3a256e",
+      "value": "97705000000000"
+    },
+    {
+      "address": "0x8147D4d7578E661004E25FFD3F9Fd7bac1F6Fb06",
+      "value": "96793527181020"
+    },
+    {
+      "address": "0x95B667b1205F24c7a254a8ff1F8EeE81444Be0B8",
+      "value": "90528539782113"
+    },
+    {
+      "address": "0xcD6b980029E6E6e0733ac8eC3E02be9410D09799",
+      "value": "88963400946485"
+    },
+    {
+      "address": "0x24712d64355EEA7790d7335e725f022A337e8bfd",
+      "value": "80932000000000"
+    },
+    {
+      "address": "0x9563cCe4e0eAE30cB36D4e3505a910811e77922a",
+      "value": "76572000000000"
+    },
+    {
+      "address": "0xEC543A56e4d25d89525593B4eF2116D05Cb96995",
+      "value": "74708000000000"
+    },
+    {
+      "address": "0xdC110207F3fFc2A44097d055E05AD527c321d672",
+      "value": "70600000000000"
+    },
+    {
+      "address": "0x11a382F50B7cE6ac9DdbF724E4B2199D42BeEEC8",
+      "value": "69397000000000"
+    },
+    {
+      "address": "0x0707e92DbFAaeC3dD578EfbC6918Fda3C1de2149",
+      "value": "68882000000000"
+    },
+    {
+      "address": "0xE9DeDee317f1CEDDA7A5C99dCddfd2c8df8DCBD5",
+      "value": "65000000000000"
+    },
+    {
+      "address": "0x3B50522994679a1e25833E8AfcbAEb708cCD6B5a",
+      "value": "62696000000000"
+    },
+    {
+      "address": "0x4a9564F8405E8Aeb748ab932004554Ed30e11a91",
+      "value": "61941000000000"
+    },
+    {
+      "address": "0x238D3B817AC0A23d2E883079B034E8c6ad744683",
+      "value": "61376000000000"
+    },
+    {
+      "address": "0xD01fe03aBA9Eb73FF92E2b64e22Daf99458E4F54",
+      "value": "59517624606456"
+    },
+    {
+      "address": "0xedED1d2e43cEbdd3F966869053269E94BD672559",
+      "value": "59068000000000"
+    },
+    {
+      "address": "0xe58D1035CD28F208E63296b0c0daA654FE1c4a48",
+      "value": "58526625713850"
+    },
+    {
+      "address": "0x873c7644f87Bb85CF27d5c77aF2f504bCba84850",
+      "value": "57432105138393"
+    },
+    {
+      "address": "0x53369957638FfB36DbAcA938a3E46DD8F69Cf504",
+      "value": "55723000000000"
+    },
+    {
+      "address": "0x59e823F629D3d25410F0fc6B94E9C823DD90478B",
+      "value": "52001000000000"
+    },
+    {
+      "address": "0x098BC023333dB046ACB69297531d5e44de2AEAB9",
+      "value": "43749000000000"
+    },
+    {
+      "address": "0x8aDFf5ECe970b9B61fcC222cba3A2f3794a9AF06",
+      "value": "41839000000000"
+    },
+    {
+      "address": "0x6259962a93e254e96A2ed55ABd469E05ee172809",
+      "value": "39551000000000"
+    },
+    {
+      "address": "0x942d8D924e571774Df0E9ab1C37F6FA7cA7bD5ad",
+      "value": "33518000000000"
+    },
+    {
+      "address": "0x2e3c319a55aA3E72E8C33F8Faec7F2601419CbeF",
+      "value": "29689931985939"
+    },
+    {
+      "address": "0x580837BF30d5E3eC24C409887e809FFD11EF4bed",
+      "value": "28828241054061"
+    },
+    {
+      "address": "0xa02fe8355f64a521219AbEA75aeA909d5194f522",
+      "value": "26956000000000"
+    },
+    {
+      "address": "0x183379144e7c8581F24B02b7eedD4E9995bb1048",
+      "value": "18156458402898"
+    },
+    {
+      "address": "0x090ac26F70C9a44ee617d25457fCf510494CF3eB",
+      "value": "15188899544309"
+    },
+    {
+      "address": "0xb464AaAd4d21b041A4EBE23bB7811135aB65Ca71",
+      "value": "14341869769170"
+    },
+    {
+      "address": "0xb0B0e087e933c69069c630CA74450bEBB0E9De16",
+      "value": "11000000000000"
+    },
+    {
+      "address": "0x0B1898e9020a4f84547d78a212491bAD4309DAc2",
+      "value": "9559242851760"
+    },
+    {
+      "address": "0x48A097DF16c7844a33B1c3d11aB353457846e13F",
+      "value": "9446901632133"
+    },
+    {
+      "address": "0x725d216A82cefFE1a7aCD904a2e833dc7E2F54c0",
+      "value": "9309830709060"
+    },
+    {
+      "address": "0x4ACb6C4321253548a7d4Bb9C84032Cc4eE04bFD7",
+      "value": "5920925869182"
+    },
+    {
+      "address": "0xb4c6252469A06F0832504dECc24e842e532b56e5",
+      "value": "5125000000000"
+    },
+    {
+      "address": "0xFf98b51E7Faaf4A73a398035EBff2657Ffa1452D",
+      "value": "5000000000000"
+    },
+    {
+      "address": "0x4f31B943afacF48B1ce397d86787198E8a3e6481",
+      "value": "5000000000000"
+    },
+    {
+      "address": "0x313CcF29FEb5ea5C7574c3990b07B5563E5d6e15",
+      "value": "5000000000000"
+    },
+    {
+      "address": "0x9eaF5398fA507bbEf775644B8919d1034868CE17",
+      "value": "3087228985848"
+    },
+    {
+      "address": "0xEda399E26644374515D79Fe705BcCDA9a29fB342",
+      "value": "2000000000000"
+    },
+    {
+      "address": "0x20Aca1391cD5f5cec1329041328a7a49C9ABF9B2",
+      "value": "2000000000000"
+    },
+    {
+      "address": "0x48b51287FB5281EA0913100809C3b7f1649C7996",
+      "value": "1333586866306"
+    },
+    {
+      "address": "0xc159Df15180A5C0d249EFB0E3D310B609d8c357F",
+      "value": "1125000000000"
+    },
+    {
+      "address": "0x196111A3132865014005C04693A7487da03A080f",
+      "value": "1000000000000"
+    },
+    {
+      "address": "0x14016e271d5d439CeB449e441a2c37347e77D27F",
+      "value": "1000000000000"
+    },
+    {
+      "address": "0x8dd9433e6F86a035bB318A6f74AD2d3Ac6731861",
+      "value": "650895968417"
+    },
+    {
+      "address": "0xaD01C20d5886137e056775af56915de824c8fCe5",
+      "value": "565953545459"
+    },
+    {
+      "address": "0xC06ebbefD94032B85424D51906e2A335EFAe264B",
+      "value": "517260000000"
+    },
+    {
+      "address": "0xFf163da3e36E25DC71e217E09F0B2a56fCcfD44D",
+      "value": "500000000000"
+    },
+    {
+      "address": "0xA5BB3C2912eF2F151982F0BC818C894E3Ebd6983",
+      "value": "499805911696"
+    },
+    {
+      "address": "0xB0d4c94D226eF27e676b4a7Cb82Cd6f7bDFe9aa8",
+      "value": "420000000000"
+    },
+    {
+      "address": "0xA27D60fe6292f7ac16166fBF8677394ad207Ba5c",
+      "value": "420000000000"
+    },
+    {
+      "address": "0x53A54d4E2eA1C1c12B9014BF31BeF4460c52D790",
+      "value": "420000000000"
+    },
+    {
+      "address": "0xD6Cc73a3119842cE42fc9c26cfcAeFf8b26478e4",
+      "value": "375000000000"
+    },
+    {
+      "address": "0x42A65e48728C263De42529b2e76bF40c7C7c607c",
+      "value": "250000000000"
+    },
+    {
+      "address": "0x3cc489c1Db5C97f9A842a8FcCfeF78DE0B70E931",
+      "value": "250000000000"
+    },
+    {
+      "address": "0x2be87aD70Cf11EA294d7c42044b5b8277A3E4874",
+      "value": "145775705801"
+    },
+    {
+      "address": "0x6648500c7C2c30f0765c28e2498D2C8737A04e57",
+      "value": "45000000000"
+    },
+    {
+      "address": "0xf5c4F3Dc02c3FB9279495a8fEF7B0741da956157",
+      "value": "27950991375"
+    },
+    {
+      "address": "0x87Bb118DfEC54870d5443ee0bD58199E15C213a4",
+      "value": "2000000000"
+    },
+    {
+      "address": "0x66B26A962ad20b6148c574C36d8Ae9FB39b503D0",
+      "value": "1000000000"
+    },
+    {
+      "address": "0xf37355Ca7549b3736e3aA6Ebd80ebbA7Eb457780",
+      "value": "299998"
+    },
+    {
+      "address": "0xB91136CA8D21cDEd0FA36e6a6D8d1e50434A6D03",
+      "value": "52"
+    },
+    {
+      "address": "0x0E7FE2f231812F1263c448a8Aded6B171B2cb489",
+      "value": "2"
+    },
+    {
+      "address": "0xaF7469615b0D710b779e57fbf6A83d67F033B6B2",
+      "value": "1"
+    },
+    {
+      "address": "0x8F10B468b06c6FD214B65F87778827F7D113f996",
+      "value": "1"
+    },
+    {
+      "address": "0x2Ca37ff95caF25366eF16fc2E655b78a165D125F",
+      "value": "1"
+    }
+  ],
+  "holdersComplete": true
 }
