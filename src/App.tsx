@@ -196,6 +196,11 @@ function DataIntegrityPanel({ token, chain, indexed }: { token: TokenState; chai
   const snapshotTone: DotTone = !indexed.snapshotAt ? 'gray' : indexed.snapshotStale ? 'yellow' : 'green'
   const snapshotValue = indexed.snapshotAt ? `${formatTimeAgo(new Date(indexed.snapshotAt).getTime())}${indexed.snapshotStale ? ' · stale' : ''}` : 'No snapshot yet'
   const snapshotTitle = indexed.snapshotAt ? `Snapshot generated ${new Date(indexed.snapshotAt).toLocaleString()}` : undefined
+  const swapIndexTone: DotTone = !indexed.swapIndexing ? 'gray' : indexed.swapIndexing.backfillComplete ? 'green' : 'yellow'
+  const swapIndexValue = indexed.swapIndexing
+    ? `Block ${formatInteger(indexed.swapIndexing.lastIndexedBlock)} · ${indexed.swapIndexing.backfillComplete ? 'caught up to chain tip' : 'backfilling'}`
+    : 'Not yet indexed'
+  const swapIndexTitle = 'Persisted eth_getLogs backfill of this pool\'s Swap events, run every 15 minutes. "Backfilling" means the indexer has not yet reached the chain tip, so 24h/volume figures sourced from it may be incomplete.'
   return (
     <section className="panel status-panel">
       <div className="panel-head"><div><h2>Data integrity</h2><p>What is verified right now</p></div><Badge tone={indexed.snapshotStale ? 'warn' : 'live'}>{indexed.snapshotStale ? 'STALE SNAPSHOT' : 'TRANSPARENT'}</Badge></div>
@@ -205,7 +210,8 @@ function DataIntegrityPanel({ token, chain, indexed }: { token: TokenState; chai
       <StatusRow tone={holdersTone} label="Holder ranking" value={holdersValue} />
       <StatusRow tone={coverageTone} label="7-day coverage" value={coverageValue} />
       <StatusRow tone={snapshotTone} label="Snapshot freshness" value={snapshotValue} title={snapshotTitle} />
-      <StatusRow tone="gray" label="Fees / WETH rewards" value="Unavailable" />
+      <StatusRow tone={swapIndexTone} label="Swap index" value={swapIndexValue} title={swapIndexTitle} />
+      <StatusRow tone="gray" label="Fees / WETH rewards" value="Unavailable" title="No verified reward/distribution contract identified yet — see the Fees & rewards tab for the verified next step." />
       <div className="source-note">Sources: RPC for contract reads; Blockscout for indexed token metadata and transfers. Pool swaps, historical volume, rewards, and pool-derived economics remain unavailable until verified.{coverage && !coverage.coverageComplete7d ? ` Activity counts withheld because the snapshot reached only ${coverage.pagesFetched ?? 'a bounded number of'} page(s) and does not confirm 7-day coverage.` : ''}</div>
     </section>
   )
@@ -229,9 +235,21 @@ function Overview({ token, chain, indexed, updated, quote, wethPrice }: { token:
   const usdTooltip = calculatedUsd !== null && !indexed.priceUsd
     ? `Derived: ${formatSpotQuote(quote)} WETH/HOODL × $${wethPrice.usd?.toLocaleString('en-US')} WETH/USD (Blockscout indexed rate for the pool's WETH token). Not HOODL's own indexed price.`
     : undefined
+  // Blockscout's own token-level volume24h field is not populated for this
+  // token (observed empty in production). Fall back to the persisted
+  // Uniswap V3 Swap-event index — the same verified source the Trading tab
+  // uses — rather than leaving this metric unavailable whenever that field
+  // is empty but real swap history has already been indexed.
+  const swapVolume24h = indexed.swapActivity && token.decimals !== null
+    ? `${formatUnits(BigInt(indexed.swapActivity.volume24hHoodl), token.decimals)} HOODL`
+    : null
+  const volume24hValue = indexed.volume24h ?? swapVolume24h ?? '—'
+  const volume24hSource: MetricSource = indexed.volume24h || swapVolume24h ? 'Indexed' : 'Unavailable'
+  const volume24hSubtext = !indexed.volume24h && swapVolume24h ? 'Persisted Uniswap V3 Swap-event index, refreshed every 15 minutes' : undefined
+  const volume24hError = indexed.volume24h || swapVolume24h ? null : (indexed.error ?? 'Blockscout volume field empty and no persisted swap index yet')
   return <>
     <div className="hero-grid"><div className="hero-copy"><Badge tone="live">READ-ONLY TERMINAL</Badge><h1>Understand the<br /><em>HOODL economy.</em></h1><p>Track trading activity, liquidity, and WETH distributions on Robinhood Chain — with every metric sourced, timestamped, and honest.</p><div className="hero-links"><a href={`${CHAIN.explorerUrl}/token/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer">View token on Blockscout ↗</a><span>·</span><span>Chain {CHAIN.id}</span></div></div><div className="network-card"><HeroOrbit /><div className="network-orbit"><span>H</span></div><div><span className="eyebrow">NETWORK STATUS</span><h3>{CHAIN.name}</h3><Badge tone={chain.error || (chain.chainId !== null && chain.chainId !== CHAIN.id) ? 'warn' : chain.chainId === CHAIN.id ? 'live' : 'muted'}>{chain.error ? 'RPC unavailable' : chain.chainId === null ? 'Awaiting RPC' : chain.chainId !== CHAIN.id ? 'Wrong network' : 'Read-only connected'}</Badge></div><div className="network-meta"><span>Chain ID <b>{chain.chainId ?? '—'}</b></span><span>Latest block <b>{chain.block ? formatInteger(Number(chain.block)) : '—'}</b></span></div></div></div>
-    <div className="metrics"><Metric label="Token name" value={token.name ?? '—'} source={token.name ? 'On-chain' : 'Unavailable'} error={token.name ? null : token.error} accent /><Metric label="Symbol" value={token.symbol ?? '—'} source={token.symbol ? 'On-chain' : 'Unavailable'} error={token.symbol ? null : token.error} /><Metric label="Total supply" value={token.supply !== null && token.decimals !== null ? formatCompactUnits(token.supply, token.decimals) : '—'} source={token.supply !== null ? 'Calculated' : 'Unavailable'} error={token.supply !== null ? null : token.error} /><Metric label="Spot price (WETH)" value={formatSpotQuote(quote)} source={wethPerHoodl !== null ? 'Calculated' : 'Unavailable'} error={wethPerHoodl !== null ? null : (quote?.error ?? 'Uniswap V3 pool quote unavailable')} subtext={wethPerHoodl !== null ? 'Verified pool sqrtPriceX96 · Uniswap V3' : undefined} accent /><Metric label="Price (USD)" value={usdValue} source={usdSource} error={usdError} subtext={usdSubtext} tooltip={usdTooltip} /><Metric label="24h volume" value={indexed.volume24h ?? '—'} source={indexed.volume24h ? 'Indexed' : 'Unavailable'} error={indexed.volume24h ? null : indexed.error} /><Metric label="Holders" value={indexed.holders !== null ? formatInteger(indexed.holders) : '—'} source={indexed.holders !== null ? 'Indexed' : 'Unavailable'} error={indexed.holders !== null ? null : indexed.error} /></div>
+    <div className="metrics"><Metric label="Token name" value={token.name ?? '—'} source={token.name ? 'On-chain' : 'Unavailable'} error={token.name ? null : token.error} accent /><Metric label="Symbol" value={token.symbol ?? '—'} source={token.symbol ? 'On-chain' : 'Unavailable'} error={token.symbol ? null : token.error} /><Metric label="Total supply" value={token.supply !== null && token.decimals !== null ? formatCompactUnits(token.supply, token.decimals) : '—'} source={token.supply !== null ? 'Calculated' : 'Unavailable'} error={token.supply !== null ? null : token.error} /><Metric label="Spot price (WETH)" value={formatSpotQuote(quote)} source={wethPerHoodl !== null ? 'Calculated' : 'Unavailable'} error={wethPerHoodl !== null ? null : (quote?.error ?? 'Uniswap V3 pool quote unavailable')} subtext={wethPerHoodl !== null ? 'Verified pool sqrtPriceX96 · Uniswap V3' : undefined} accent /><Metric label="Price (USD)" value={usdValue} source={usdSource} error={usdError} subtext={usdSubtext} tooltip={usdTooltip} /><Metric label="24h volume" value={volume24hValue} source={volume24hSource} error={volume24hError} subtext={volume24hSubtext} /><Metric label="Holders" value={indexed.holders !== null ? formatInteger(indexed.holders) : '—'} source={indexed.holders !== null ? 'Indexed' : 'Unavailable'} error={indexed.holders !== null ? null : indexed.error} /></div>
     <div className="two-col"><Chart title="Transfer activity" subtitle={`Verified token transfers · paginated snapshot${indexed.snapshotStale ? ' · stale' : ''}`} activity={indexed.activity} coverageComplete7d={indexed.coverage?.coverageComplete7d} history={indexed.history} /><DataIntegrityPanel token={token} chain={chain} indexed={indexed} /></div>
     <div className="two-col"><section className="panel contract-panel"><div className="panel-head"><div><h2>Contracts</h2><p>Centralized, clickable configuration</p></div></div><div className="address-row"><span><label>HOODL TOKEN</label><code>{HOODL_TOKEN.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${HOODL_TOKEN.address}`} target="_blank" rel="noreferrer" aria-label="View HOODL token address on explorer">↗</a></div><div className="address-row"><span><label>{CONFIGURED_POOL.poolType.toUpperCase()} POOL · {CONFIGURED_POOL.pair}</label><code>{CONFIGURED_POOL.address}</code></span><a href={`${CHAIN.explorerUrl}/address/${CONFIGURED_POOL.address}`} target="_blank" rel="noreferrer" aria-label={`View ${CONFIGURED_POOL.pair} pool address on explorer`}>↗</a></div></section><section className="panel block-panel"><div className="panel-head"><div><h2>On-chain snapshot</h2><p>Freshness is shown, never implied</p></div><Badge tone={chain.error ? 'warn' : 'live'}>{chain.error ? 'STALE' : 'LIVE'}</Badge></div><div className="snapshot"><span>Last updated <b>{updated ? new Date(updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</b></span><span>Contract deployed <b>{chain.deployed === null ? '—' : chain.deployed ? 'Yes' : 'No'}</b></span><span>Decimals <b>{token.decimals ?? '—'}</b></span></div></section></div>
   </>
@@ -316,7 +334,13 @@ function TabContent({ tab, token, chain, poolV3, quote, swaps, indexed, updated,
     </>
   }
   const title = 'Fees & rewards'
-  return <><div className="metrics"><Metric label="Total volume" value="—" /><Metric label="Generated fees" value="—" /><Metric label="WETH distributed" value="—" /><Metric label="Distribution efficiency" value="—" /></div><Chart title={title} subtitle="Historical values will appear after verified indexing" /><EmptyState title={`${title} data unavailable`} body="No unverified DEX, fee, reward, or volume values are displayed." todo="Connect a verified pool-event indexer and document the event semantics before enabling calculations." onRetry={onRetry} retrying={retrying} /></>
+  return <><div className="metrics"><Metric label="Total volume" value="—" /><Metric label="Generated fees" value="—" /><Metric label="WETH distributed" value="—" /><Metric label="Distribution efficiency" value="—" /></div><Chart title={title} subtitle="Historical values will appear after verified indexing" /><EmptyState
+    title={`${title} data unavailable`}
+    body="Swap volume is now tracked by a persisted, verified Uniswap V3 Swap-event index (see the Trading tab), but that alone does not confirm fees or rewards. “Generated fees” needs each swap's input-side token identified and matched against the pool's feeTier, ideally cross-checked against the pool's own feeGrowthGlobal0X128/feeGrowthGlobal1X128 accumulators — not yet implemented. “WETH distributed” needs a specific, verified reward/distribution contract or event, which has not been identified for this token; nothing here is estimated from transfers or guessed."
+    todo="Read feeGrowthGlobal0X128/feeGrowthGlobal1X128 from the pool contract to verify fee accrual directly on-chain, and identify a documented reward/distribution contract (address + event ABI) before enabling this panel."
+    onRetry={onRetry}
+    retrying={retrying}
+  /></>
 }
 
 function App() {

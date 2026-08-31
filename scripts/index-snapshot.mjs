@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { blockscoutGet } from './blockscoutClient.mjs'
 import { buildSwapDayBuckets, classifySwap, computeSwapActivity, decodeSwapLog, mergeSwapHistory, SWAP_TOPIC0, trimRecentSwaps } from './poolSwapIndexer.mjs'
 import { ethBlockNumber, ethGetLogsChunked, fetchBlockTimestamps, resolvePoolIdentity } from './poolSwapRpc.mjs'
 
@@ -7,7 +8,6 @@ const pool = '0xF87761231646DA4aa00905c237EaCbfF112Df930'
 const api = 'https://robinhoodchain.blockscout.com/api/v2'
 const RPC_URL = 'https://rpc.mainnet.chain.robinhood.com'
 const SWAP_CHUNK_SPAN = 2_000_000n
-const now = new Date()
 const SNAPSHOT_PATH = 'public/data/snapshot.json'
 const MAX_HISTORY_DAYS = 90
 const DAY_MS = 24 * 3600_000
@@ -26,7 +26,7 @@ async function readPriorSnapshot() {
 // failure during the chunk loop stops the loop but still returns whatever
 // was actually confirmed — never claims coverage it doesn't have, and never
 // throws away chunks that already succeeded this run.
-async function indexPoolSwaps(priorSnapshot, nowDate) {
+export async function indexPoolSwaps(priorSnapshot, nowDate) {
   const prior = priorSnapshot?.swaps ?? null
   const identity = await resolvePoolIdentity(RPC_URL, pool, token)
   const latest = await ethBlockNumber(RPC_URL)
@@ -134,118 +134,125 @@ function closedDayCounts(datedTransfers, nowDate, cutoffMs) {
 }
 
 async function get(path) {
-  const response = await fetch(`${api}${path}`, { headers: { accept: 'application/json' } })
-  if (!response.ok) throw new Error(`Blockscout HTTP ${response.status} for ${path}`)
-  return response.json()
+  return blockscoutGet(api, path)
 }
 
 const MAX_PAGES = 20
-const cutoff = now.getTime() - 7 * 24 * 3600_000
-const transfers = []
-const holders = []
-let holdersComplete = false
-let nextParams = {}
-let pagesFetched = 0
-let coverageComplete7d = false
-let transferIndexError = null
 
-while (pagesFetched < MAX_PAGES) {
-  const query = new URLSearchParams(nextParams).toString()
-  let raw
-  try {
-    raw = await get(`/tokens/${token}/transfers?${query}`)
-  } catch (error) {
-    transferIndexError = error instanceof Error ? error.message : 'request failed'
-    break
-  }
-  pagesFetched += 1
-  const page = (raw.items ?? []).flatMap((item) => {
-    const hash = item.transaction_hash ?? item.tx_hash
-    const from = item.from?.hash
-    const to = item.to?.hash
-    const value = item.total?.value
-    if (!hash || !from || !to || value === undefined) return []
-    return [{ hash, from, to, value, timestamp: item.timestamp ?? null, blockNumber: item.block_number ?? null }]
-  })
-  transfers.push(...page)
-  const datedPage = page.filter((row) => row.timestamp).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-  if (datedPage[0] && new Date(datedPage[0].timestamp).getTime() <= cutoff) {
-    coverageComplete7d = true
-    break
-  }
-  const params = raw.next_page_params
-  if (!params || typeof params !== 'object' || Object.keys(params).length === 0) break
-  nextParams = params
-}
-if (pagesFetched === 0) {
-  throw new Error(`No transfer snapshot written: ${transferIndexError ?? 'indexer returned no page'}`)
-}
-const dated = transfers.filter((row) => row.timestamp)
-const counts = (hours) => dated.filter((row) => now.getTime() - new Date(row.timestamp).getTime() <= hours * 3600_000).length
-const oldestTransferAt = dated.length ? dated.reduce((oldest, row) => new Date(row.timestamp) < new Date(oldest) ? row.timestamp : oldest, dated[0].timestamp) : null
+export async function main() {
+  const now = new Date()
+  const cutoff = now.getTime() - 7 * 24 * 3600_000
+  const transfers = []
+  const holders = []
+  let holdersComplete = false
+  let nextParams = {}
+  let pagesFetched = 0
+  let coverageComplete7d = false
+  let transferIndexError = null
 
-// History is a rolling ledger of verified per-day transfer counts, built up
-// run over run. A prior run's closed days are never overwritten or
-// re-derived — only newly-closed days (never seen before) are appended —
-// so a run with incomplete coverage can never erase previously verified
-// history.
-const priorSnapshot = await readPriorSnapshot()
-const priorHistory = Array.isArray(priorSnapshot?.history) ? priorSnapshot.history : []
-let history = priorHistory
-if (coverageComplete7d) {
-  const merged = new Map(priorHistory.map((day) => [day.date, day]))
-  for (const day of closedDayCounts(dated, now, cutoff)) {
-    if (!merged.has(day.date)) merged.set(day.date, day)
-  }
-  history = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-MAX_HISTORY_DAYS)
-}
-
-const snapshot = {
-  schemaVersion: 4,
-  generatedAt: now.toISOString(),
-  source: { name: 'Blockscout API v2', url: `${api}/tokens/${token}/transfers`, chainId: 4663, token, pool },
-  coverage: { kind: 'recent-token-transfers', pagesFetched, maxPages: MAX_PAGES, coverageComplete7d, oldestTransferAt, note: coverageComplete7d ? 'Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers.' : `Only a bounded prefix of the transfer index was returned${transferIndexError ? `; pagination stopped after an indexer error (${transferIndexError})` : ''}. Activity counts are lower bounds. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers.` },
-  transfers,
-  activity: { transfers1h: counts(1), transfers24h: counts(24), transfers7d: counts(24 * 7) },
-  history,
-}
-// Holder ranking is a separate Blockscout index. Keep it in the repository
-// snapshot as an optional fallback, but never make a missing ranking block a
-// verified transfer snapshot.
-try {
-  let holderParams = {}
-  for (let page = 0; page < 3; page += 1) {
-    const query = new URLSearchParams(holderParams).toString()
-    const raw = await get(`/tokens/${token}/holders?${query}`)
-    for (const item of raw.items ?? []) {
-      const address = typeof item.address === 'string' ? item.address : item.address?.hash
-      if (address && item.value !== undefined) holders.push({ address, value: item.value })
-    }
-    if (!raw.next_page_params || Object.keys(raw.next_page_params).length === 0) {
-      holdersComplete = true
+  while (pagesFetched < MAX_PAGES) {
+    const query = new URLSearchParams(nextParams).toString()
+    let raw
+    try {
+      raw = await get(`/tokens/${token}/transfers?${query}`)
+    } catch (error) {
+      transferIndexError = error instanceof Error ? error.message : 'request failed'
       break
     }
-    holderParams = raw.next_page_params
+    pagesFetched += 1
+    const page = (raw.items ?? []).flatMap((item) => {
+      const hash = item.transaction_hash ?? item.tx_hash
+      const from = item.from?.hash
+      const to = item.to?.hash
+      const value = item.total?.value
+      if (!hash || !from || !to || value === undefined) return []
+      return [{ hash, from, to, value, timestamp: item.timestamp ?? null, blockNumber: item.block_number ?? null }]
+    })
+    transfers.push(...page)
+    const datedPage = page.filter((row) => row.timestamp).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    if (datedPage[0] && new Date(datedPage[0].timestamp).getTime() <= cutoff) {
+      coverageComplete7d = true
+      break
+    }
+    const params = raw.next_page_params
+    if (!params || typeof params !== 'object' || Object.keys(params).length === 0) break
+    nextParams = params
   }
-} catch (error) {
-  console.warn(`Holder ranking unavailable: ${error instanceof Error ? error.message : 'request failed'}`)
-}
-snapshot.holders = holders
-snapshot.holdersComplete = holdersComplete
+  if (pagesFetched === 0) {
+    throw new Error(`No transfer snapshot written: ${transferIndexError ?? 'indexer returned no page'}`)
+  }
+  const dated = transfers.filter((row) => row.timestamp)
+  const counts = (hours) => dated.filter((row) => now.getTime() - new Date(row.timestamp).getTime() <= hours * 3600_000).length
+  const oldestTransferAt = dated.length ? dated.reduce((oldest, row) => new Date(row.timestamp) < new Date(oldest) ? row.timestamp : oldest, dated[0].timestamp) : null
 
-try {
-  // The transfer/holder pagination above already spent a burst of requests
-  // against the Robinhood Chain edge (observed to rate-limit the RPC host
-  // too, HTTP 429, even though it's a different hostname — same edge/WAF
-  // budget). A short pause here lets that window clear before the swap
-  // indexer's own RPC calls start, instead of starting them already rate-limited.
-  await new Promise((resolve) => setTimeout(resolve, 3000))
-  snapshot.swaps = await indexPoolSwaps(priorSnapshot, now)
-} catch (error) {
-  console.warn(`Swap indexing unavailable: ${error instanceof Error ? error.message : 'request failed'}`)
-  snapshot.swaps = priorSnapshot?.swaps ?? null
+  // History is a rolling ledger of verified per-day transfer counts, built up
+  // run over run. A prior run's closed days are never overwritten or
+  // re-derived — only newly-closed days (never seen before) are appended —
+  // so a run with incomplete coverage can never erase previously verified
+  // history.
+  const priorSnapshot = await readPriorSnapshot()
+  const priorHistory = Array.isArray(priorSnapshot?.history) ? priorSnapshot.history : []
+  let history = priorHistory
+  if (coverageComplete7d) {
+    const merged = new Map(priorHistory.map((day) => [day.date, day]))
+    for (const day of closedDayCounts(dated, now, cutoff)) {
+      if (!merged.has(day.date)) merged.set(day.date, day)
+    }
+    history = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-MAX_HISTORY_DAYS)
+  }
+
+  const snapshot = {
+    schemaVersion: 4,
+    generatedAt: now.toISOString(),
+    source: { name: 'Blockscout API v2', url: `${api}/tokens/${token}/transfers`, chainId: 4663, token, pool },
+    coverage: { kind: 'recent-token-transfers', pagesFetched, maxPages: MAX_PAGES, coverageComplete7d, oldestTransferAt, note: coverageComplete7d ? 'Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers.' : `Only a bounded prefix of the transfer index was returned${transferIndexError ? `; pagination stopped after an indexer error (${transferIndexError})` : ''}. Activity counts are lower bounds. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers.` },
+    transfers,
+    activity: { transfers1h: counts(1), transfers24h: counts(24), transfers7d: counts(24 * 7) },
+    history,
+  }
+  // Holder ranking is a separate Blockscout index. Keep it in the repository
+  // snapshot as an optional fallback, but never make a missing ranking block a
+  // verified transfer snapshot.
+  try {
+    let holderParams = {}
+    for (let page = 0; page < 3; page += 1) {
+      const query = new URLSearchParams(holderParams).toString()
+      const raw = await get(`/tokens/${token}/holders?${query}`)
+      for (const item of raw.items ?? []) {
+        const address = typeof item.address === 'string' ? item.address : item.address?.hash
+        if (address && item.value !== undefined) holders.push({ address, value: item.value })
+      }
+      if (!raw.next_page_params || Object.keys(raw.next_page_params).length === 0) {
+        holdersComplete = true
+        break
+      }
+      holderParams = raw.next_page_params
+    }
+  } catch (error) {
+    console.warn(`Holder ranking unavailable: ${error instanceof Error ? error.message : 'request failed'}`)
+  }
+  snapshot.holders = holders
+  snapshot.holdersComplete = holdersComplete
+
+  try {
+    // The transfer/holder pagination above already spent a burst of requests
+    // against the Robinhood Chain edge (observed to rate-limit the RPC host
+    // too, HTTP 429, even though it's a different hostname — same edge/WAF
+    // budget). A short pause here lets that window clear before the swap
+    // indexer's own RPC calls start, instead of starting them already rate-limited.
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+    snapshot.swaps = await indexPoolSwaps(priorSnapshot, now)
+  } catch (error) {
+    console.warn(`Swap indexing unavailable: ${error instanceof Error ? error.message : 'request failed'}`)
+    snapshot.swaps = priorSnapshot?.swaps ?? null
+  }
+
+  await mkdir('public/data', { recursive: true })
+  await writeFile('public/data/snapshot.json', `${JSON.stringify(snapshot, null, 2)}\n`)
+  console.log(`Wrote ${transfers.length} verified transfers at ${snapshot.generatedAt}`)
 }
 
-await mkdir('public/data', { recursive: true })
-await writeFile('public/data/snapshot.json', `${JSON.stringify(snapshot, null, 2)}\n`)
-console.log(`Wrote ${transfers.length} verified transfers at ${snapshot.generatedAt}`)
+const isDirectRun = process.argv[1] && import.meta.url === `file://${process.argv[1]}`
+if (isDirectRun) {
+  await main()
+}
