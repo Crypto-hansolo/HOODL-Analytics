@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-01T23:29:58.838Z",
+  "generatedAt": "2026-09-02T01:20:24.730Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -8067,6 +8067,10 @@
     {
       "date": "2026-08-31",
       "transferCount": 282
+    },
+    {
+      "date": "2026-09-01",
+      "transferCount": 67
     }
   ],
   "holders": [
@@ -8167,10 +8171,6 @@
       "value": "5024013424633472"
     },
     {
-      "address": "0xb6157454C988390e003AC2b078763745DC865c8E",
-      "value": "1439078042370550"
-    },
-    {
       "address": "0xDe9a9075692Ec36a5E7bDE220AC623E8b1ed53A6",
       "value": "1176600000000000"
     },
@@ -8181,6 +8181,10 @@
     {
       "address": "0xF8Ed3A12832b106b0EDc947b007C64439Ad74402",
       "value": "1054816266953591"
+    },
+    {
+      "address": "0xb6157454C988390e003AC2b078763745DC865c8E",
+      "value": "972725239800152"
     },
     {
       "address": "0x05124996a5B65cd77C579Ee69936574246cf149a",
