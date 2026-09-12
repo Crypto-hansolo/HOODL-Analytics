@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-12T21:19:58.989Z",
+  "generatedAt": "2026-09-12T23:12:39.913Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -913,7 +913,208 @@
       "transferCount": 7
     }
   ],
-  "holders": [],
+  "holders": [
+    {
+      "address": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "197123679275093355"
+    },
+    {
+      "address": "0x0aCAa523dE2CC88CD17dD23714a42F3d5a912ad0",
+      "value": "180000013272045803"
+    },
+    {
+      "address": "0xB12c7Fd6FB7E814Ec4485bB0b4B51e170f9689eb",
+      "value": "69471993601946514"
+    },
+    {
+      "address": "0x7D4b38895aCbD0b36e3E4952944e577F6785e1C6",
+      "value": "63000000887124114"
+    },
+    {
+      "address": "0x75F05DF49358eFAC50d68955d8D888f73Fe8D13A",
+      "value": "61000000145115495"
+    },
+    {
+      "address": "0x5c351ec169f98beED8fb2913Cf4Cca110d332383",
+      "value": "59942739756796513"
+    },
+    {
+      "address": "0xFB968Ac4D1614B5e49021456D77FAe7BBc043fD9",
+      "value": "50000000000000000"
+    },
+    {
+      "address": "0x972b894b6C9DA000Feb07FF2a6ae39aBF1Bc6A75",
+      "value": "44250000009627226"
+    },
+    {
+      "address": "0x5135B4f52c5820C75DB01Ad727b08dA7eCC0Df6d",
+      "value": "38500000000000000"
+    },
+    {
+      "address": "0xb36495ED2640005dB6f760b64138F7C53414e1D3",
+      "value": "31382622728160735"
+    },
+    {
+      "address": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
+      "value": "26506167325851500"
+    },
+    {
+      "address": "0x6E8f374837d730494E21EFD7dAF5b815D5Ec9931",
+      "value": "25000000000000000"
+    },
+    {
+      "address": "0x56F0Afac00A0c014C03F318d15fD77f64CDa9D96",
+      "value": "25000000000000000"
+    },
+    {
+      "address": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
+      "value": "16769095839250088"
+    },
+    {
+      "address": "0x5A4bC07128a4425464ef8F84ae7c97509D70e6EF",
+      "value": "16230314359464130"
+    },
+    {
+      "address": "0xe3A4046509D961237329b4aa03F3E15D71fd6a7A",
+      "value": "15968463811154823"
+    },
+    {
+      "address": "0x4BEEe88C0D2A511fa9b60226Dfc53d8e86fc99f1",
+      "value": "10999999999951645"
+    },
+    {
+      "address": "0x10337523fE988d6ce28B0Bd65c4Cc6dd34E39c1D",
+      "value": "10982987131938541"
+    },
+    {
+      "address": "0x49438b52DfD36f5dB625C0FF1350b932ba2A0f60",
+      "value": "10660690923657316"
+    },
+    {
+      "address": "0xC928620f0Aae35374794729C3e89D02ecc9faCf2",
+      "value": "10011725792665473"
+    },
+    {
+      "address": "0x9A27d3D9d84A20180546E62dF7Ea5c895696fF4F",
+      "value": "10000000000000000"
+    },
+    {
+      "address": "0x2B8b37DD17Fa67833B01E30229502169D1a8AE40",
+      "value": "7191011365818806"
+    },
+    {
+      "address": "0x47C5599A5f0aD707BB70101D1FbD463EF93dF5a0",
+      "value": "6245505746982084"
+    },
+    {
+      "address": "0xeb1Bd9B64A240c537408Ee1f21aA7FACDf7c923f",
+      "value": "5024013424633472"
+    },
+    {
+      "address": "0xDe9a9075692Ec36a5E7bDE220AC623E8b1ed53A6",
+      "value": "1176600000000000"
+    },
+    {
+      "address": "0x78c2964b2e382765da32021B2ec79Da721621625",
+      "value": "1056367889522764"
+    },
+    {
+      "address": "0x8Fa691aD89B9aA2B9fEF44C96085f79Cb9d0DfBA",
+      "value": "1000000000000000"
+    },
+    {
+      "address": "0xb6157454C988390e003AC2b078763745DC865c8E",
+      "value": "972725239800152"
+    },
+    {
+      "address": "0xF8Ed3A12832b106b0EDc947b007C64439Ad74402",
+      "value": "717183394959138"
+    },
+    {
+      "address": "0x05124996a5B65cd77C579Ee69936574246cf149a",
+      "value": "505193879279886"
+    },
+    {
+      "address": "0x8147D4d7578E661004E25FFD3F9Fd7bac1F6Fb06",
+      "value": "400000000000009"
+    },
+    {
+      "address": "0x69B623d036E2f0bCD4d1fec7ebCeAF0250a28196",
+      "value": "212253108088428"
+    },
+    {
+      "address": "0xd6AA78f61a4D5Ce462BA11B4E0637661dA08fb76",
+      "value": "207940000000000"
+    },
+    {
+      "address": "0xB6360fB29DDF125Db53c9BeFcfE8C0F1dFb55D79",
+      "value": "204649000000000"
+    },
+    {
+      "address": "0x5750Ae7fa66C6427a1377A72D300351ccC2A06f7",
+      "value": "147697000000000"
+    },
+    {
+      "address": "0x165c1F95d7537F199c0948f51Bbd6F3C93391d9D",
+      "value": "136051573230027"
+    },
+    {
+      "address": "0xDeead8b0D4f68CDf55392316514A2146747a3960",
+      "value": "111000000000000"
+    },
+    {
+      "address": "0x34BA7Dcc4691B80be3CCA15cc532b03d51De51D6",
+      "value": "105970000000000"
+    },
+    {
+      "address": "0xbE9bfdd044d0c9b50383332c235aC5B3EBfa782B",
+      "value": "100004174100000"
+    },
+    {
+      "address": "0x552C9375dE2fb84872316593Efa88130FA3a256e",
+      "value": "97705000000000"
+    },
+    {
+      "address": "0x95B667b1205F24c7a254a8ff1F8EeE81444Be0B8",
+      "value": "90528539782113"
+    },
+    {
+      "address": "0xcD6b980029E6E6e0733ac8eC3E02be9410D09799",
+      "value": "88963425946485"
+    },
+    {
+      "address": "0x24712d64355EEA7790d7335e725f022A337e8bfd",
+      "value": "80932000000000"
+    },
+    {
+      "address": "0x9563cCe4e0eAE30cB36D4e3505a910811e77922a",
+      "value": "76572000000000"
+    },
+    {
+      "address": "0xEC543A56e4d25d89525593B4eF2116D05Cb96995",
+      "value": "74708000000000"
+    },
+    {
+      "address": "0xdC110207F3fFc2A44097d055E05AD527c321d672",
+      "value": "70600000000000"
+    },
+    {
+      "address": "0x11a382F50B7cE6ac9DdbF724E4B2199D42BeEEC8",
+      "value": "69397000000000"
+    },
+    {
+      "address": "0x0707e92DbFAaeC3dD578EfbC6918Fda3C1de2149",
+      "value": "68882000000000"
+    },
+    {
+      "address": "0xE9DeDee317f1CEDDA7A5C99dCddfd2c8df8DCBD5",
+      "value": "65000000000000"
+    },
+    {
+      "address": "0xb464AaAd4d21b041A4EBE23bB7811135aB65Ca71",
+      "value": "64242356047619"
+    }
+  ],
   "holdersComplete": false,
   "swaps": null
 }
