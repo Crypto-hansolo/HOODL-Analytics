@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-18T09:48:40.126Z",
+  "generatedAt": "2026-09-18T14:16:46.127Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -13,10 +13,42 @@
     "pagesFetched": 2,
     "maxPages": 20,
     "coverageComplete7d": true,
-    "oldestTransferAt": "2026-09-10T11:16:08.000000Z",
+    "oldestTransferAt": "2026-09-11T05:46:07.000000Z",
     "note": "Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers."
   },
   "transfers": [
+    {
+      "hash": "0x05675702c431eee47c5ec0ce25d55fc12fa7f98b69c756e3e0e97fb9fa800280",
+      "from": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "56930",
+      "timestamp": "2026-09-18T11:00:10.000000Z",
+      "blockNumber": 66172233
+    },
+    {
+      "hash": "0x05675702c431eee47c5ec0ce25d55fc12fa7f98b69c756e3e0e97fb9fa800280",
+      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "to": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
+      "value": "56930",
+      "timestamp": "2026-09-18T11:00:10.000000Z",
+      "blockNumber": 66172233
+    },
+    {
+      "hash": "0x18389ccfdba79aa20a6d2511513565d9f1f01f91a0814557e62ad45a5a6765db",
+      "from": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "6906110",
+      "timestamp": "2026-09-18T11:00:04.000000Z",
+      "blockNumber": 66172175
+    },
+    {
+      "hash": "0x18389ccfdba79aa20a6d2511513565d9f1f01f91a0814557e62ad45a5a6765db",
+      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "to": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
+      "value": "6906110",
+      "timestamp": "2026-09-18T11:00:04.000000Z",
+      "blockNumber": 66172175
+    },
     {
       "hash": "0xd854b75382c050eab2d5f2996935957a69ad2b947ec90c3f718474289a2d01d6",
       "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
@@ -784,43 +816,11 @@
       "value": "6183014454975",
       "timestamp": "2026-09-11T05:46:07.000000Z",
       "blockNumber": 60019632
-    },
-    {
-      "hash": "0x4951aea696a7817dbd223ee2687e4680c496ebda1b38c698ed86a87d2ab83f4b",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
-      "value": "6183014454975",
-      "timestamp": "2026-09-11T05:46:07.000000Z",
-      "blockNumber": 60019632
-    },
-    {
-      "hash": "0xfc28df0f946d6f99f2f9d88cb43e20c9a723b806d7528edadf2f5a1a0e3366e2",
-      "from": "0xb92fe925DC43a0ECdE6c8b1a2709c170Ec4fFf4f",
-      "to": "0xe1e3DbbEe4Bbb2Dff2C9A296C95356B52cebD1C3",
-      "value": "1222444443224",
-      "timestamp": "2026-09-10T18:38:09.000000Z",
-      "blockNumber": 59623342
-    },
-    {
-      "hash": "0xfc28df0f946d6f99f2f9d88cb43e20c9a723b806d7528edadf2f5a1a0e3366e2",
-      "from": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
-      "to": "0xb92fe925DC43a0ECdE6c8b1a2709c170Ec4fFf4f",
-      "value": "1222444443224",
-      "timestamp": "2026-09-10T18:38:09.000000Z",
-      "blockNumber": 59623342
-    },
-    {
-      "hash": "0x0acc31deba3c9ce7e9200f6858973b8f652aac8777e7b8442533f5177b310e0c",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0x2270cBad5072b7685357EC83dDC959FFDE535b27",
-      "value": "250000000000000",
-      "timestamp": "2026-09-10T11:16:08.000000Z",
-      "blockNumber": 59360223
     }
   ],
   "activity": {
-    "transfers1h": 2,
-    "transfers24h": 21,
+    "transfers1h": 0,
+    "transfers24h": 25,
     "transfers7d": 94
   },
   "history": [
