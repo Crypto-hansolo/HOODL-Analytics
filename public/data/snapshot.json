@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-20T04:46:30.631Z",
+  "generatedAt": "2026-09-20T09:41:07.174Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -1220,8 +1220,8 @@
   ],
   "activity": {
     "transfers1h": 0,
-    "transfers24h": 19,
-    "transfers7d": 107
+    "transfers24h": 18,
+    "transfers7d": 101
   },
   "history": [
     {
