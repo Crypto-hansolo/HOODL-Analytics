@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-25T10:27:24.529Z",
+  "generatedAt": "2026-09-25T15:29:25.782Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -17,6 +17,14 @@
     "note": "Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers."
   },
   "transfers": [
+    {
+      "hash": "0x31529d7913cec31ee3c5fe6b68c5980e28ea0893eddc3c8cbad1c1c5c652da08",
+      "from": "0x5BB92862172400073dDbfc038d5B27AE743B132E",
+      "to": "0x698b6CfCdaba662f44f1B4dAb9f9CE1923AB9FA0",
+      "value": "103532566133622",
+      "timestamp": "2026-09-25T15:01:43.000000Z",
+      "blockNumber": 72318245
+    },
     {
       "hash": "0xe5704cb0f949e691fb36ee651593caa46f1e203b5c5f9972aceb4b80fb8dd262",
       "from": "0xB477751B76CF82d00a686A1232f5fCD772414Af3",
@@ -2008,20 +2016,12 @@
       "value": "941020218188644",
       "timestamp": "2026-09-15T11:38:21.000000Z",
       "blockNumber": 63628914
-    },
-    {
-      "hash": "0xfdf11fc8740a45e571a0bad8d0c6c63078aa6dcdc464a01b1085439d1de97c7f",
-      "from": "0x2B8b37DD17Fa67833B01E30229502169D1a8AE40",
-      "to": "0xB477751B76CF82d00a686A1232f5fCD772414Af3",
-      "value": "941020218188644",
-      "timestamp": "2026-09-15T11:38:21.000000Z",
-      "blockNumber": 63628914
     }
   ],
   "activity": {
-    "transfers1h": 0,
-    "transfers24h": 38,
-    "transfers7d": 219
+    "transfers1h": 1,
+    "transfers24h": 31,
+    "transfers7d": 216
   },
   "history": [
     {
@@ -2311,7 +2311,7 @@
       "value": "105970000000000"
     },
     {
-      "address": "0x5BB92862172400073dDbfc038d5B27AE743B132E",
+      "address": "0x698b6CfCdaba662f44f1B4dAb9f9CE1923AB9FA0",
       "value": "103532566133622"
     },
     {
