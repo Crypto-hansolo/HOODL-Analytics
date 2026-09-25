@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-25T19:29:56.292Z",
+  "generatedAt": "2026-09-25T22:45:35.569Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -17,6 +17,14 @@
     "note": "Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers."
   },
   "transfers": [
+    {
+      "hash": "0x5e81e114c9ea574dc1a4a9cfb0eb8f5072af5b8e01a74cb3daaf6d538a5a4635",
+      "from": "0xe1e3DbbEe4Bbb2Dff2C9A296C95356B52cebD1C3",
+      "to": "0x5c351ec169f98beED8fb2913Cf4Cca110d332383",
+      "value": "1953437188645",
+      "timestamp": "2026-09-25T20:30:18.000000Z",
+      "blockNumber": 72514452
+    },
     {
       "hash": "0x31529d7913cec31ee3c5fe6b68c5980e28ea0893eddc3c8cbad1c1c5c652da08",
       "from": "0x5BB92862172400073dDbfc038d5B27AE743B132E",
@@ -2008,20 +2016,12 @@
       "value": "710701086430867",
       "timestamp": "2026-09-15T11:38:21.000000Z",
       "blockNumber": 63628914
-    },
-    {
-      "hash": "0xfdf11fc8740a45e571a0bad8d0c6c63078aa6dcdc464a01b1085439d1de97c7f",
-      "from": "0xB477751B76CF82d00a686A1232f5fCD772414Af3",
-      "to": "0x2Ca37ff95caF25366eF16fc2E655b78a165D125F",
-      "value": "941020218188644",
-      "timestamp": "2026-09-15T11:38:21.000000Z",
-      "blockNumber": 63628914
     }
   ],
   "activity": {
     "transfers1h": 0,
     "transfers24h": 23,
-    "transfers7d": 216
+    "transfers7d": 215
   },
   "history": [
     {
@@ -2188,7 +2188,7 @@
     },
     {
       "address": "0x5c351ec169f98beED8fb2913Cf4Cca110d332383",
-      "value": "59985882777996248"
+      "value": "59987836215184893"
     },
     {
       "address": "0xFB968Ac4D1614B5e49021456D77FAe7BBc043fD9",
@@ -2467,10 +2467,6 @@
       "value": "5920925869182"
     },
     {
-      "address": "0xe1e3DbbEe4Bbb2Dff2C9A296C95356B52cebD1C3",
-      "value": "5727074901571"
-    },
-    {
       "address": "0xFf98b51E7Faaf4A73a398035EBff2657Ffa1452D",
       "value": "5000000000000"
     },
@@ -2481,6 +2477,10 @@
     {
       "address": "0x313CcF29FEb5ea5C7574c3990b07B5563E5d6e15",
       "value": "5000000000000"
+    },
+    {
+      "address": "0xe1e3DbbEe4Bbb2Dff2C9A296C95356B52cebD1C3",
+      "value": "3773637712926"
     },
     {
       "address": "0x9eaF5398fA507bbEf775644B8919d1034868CE17",
