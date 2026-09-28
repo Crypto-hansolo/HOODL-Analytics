@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-28T07:02:27.503Z",
+  "generatedAt": "2026-09-28T15:31:48.730Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -13,10 +13,34 @@
     "pagesFetched": 5,
     "maxPages": 20,
     "coverageComplete7d": true,
-    "oldestTransferAt": "2026-09-19T16:20:37.000000Z",
+    "oldestTransferAt": "2026-09-19T17:05:04.000000Z",
     "note": "Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers."
   },
   "transfers": [
+    {
+      "hash": "0xac381cef97221d9def2b00cf096859bc40f72fe3a1649e8d0dd67ac06f2b790f",
+      "from": "0xbdbaE060CBAB0E9cfE802A7513DD5eCb36CDa6C3",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "520000000000000",
+      "timestamp": "2026-09-28T13:58:59.000000Z",
+      "blockNumber": 74851366
+    },
+    {
+      "hash": "0xac381cef97221d9def2b00cf096859bc40f72fe3a1649e8d0dd67ac06f2b790f",
+      "from": "0xbdbaE060CBAB0E9cfE802A7513DD5eCb36CDa6C3",
+      "to": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
+      "value": "130000000000000",
+      "timestamp": "2026-09-28T13:58:59.000000Z",
+      "blockNumber": 74851366
+    },
+    {
+      "hash": "0xac381cef97221d9def2b00cf096859bc40f72fe3a1649e8d0dd67ac06f2b790f",
+      "from": "0x78c2964b2e382765da32021B2ec79Da721621625",
+      "to": "0xbdbaE060CBAB0E9cfE802A7513DD5eCb36CDa6C3",
+      "value": "650000000000000",
+      "timestamp": "2026-09-28T13:58:59.000000Z",
+      "blockNumber": 74851366
+    },
     {
       "hash": "0xe09a9ae42e07a92d47c8fb5cf8ddf87524fe506aa17dfae6698d71a935c33b46",
       "from": "0xe1e3DbbEe4Bbb2Dff2C9A296C95356B52cebD1C3",
@@ -1992,36 +2016,12 @@
       "value": "18677575",
       "timestamp": "2026-09-19T17:05:04.000000Z",
       "blockNumber": 67247215
-    },
-    {
-      "hash": "0xef530f2fdf934665f0409a6f009ab2b63b54cbd626ac5ab477bb2c7398552679",
-      "from": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
-      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "2265794073",
-      "timestamp": "2026-09-19T16:34:20.000000Z",
-      "blockNumber": 67228862
-    },
-    {
-      "hash": "0xef530f2fdf934665f0409a6f009ab2b63b54cbd626ac5ab477bb2c7398552679",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
-      "value": "2265794073",
-      "timestamp": "2026-09-19T16:34:20.000000Z",
-      "blockNumber": 67228862
-    },
-    {
-      "hash": "0x4a3c0b6eb93e0685dc6126e0dc2be72f9ed0ddba6987dc29356a814400d1c213",
-      "from": "0x3D85E01af7E08f781531292c163D35F7c6a1F9eE",
-      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "274865600434",
-      "timestamp": "2026-09-19T16:20:37.000000Z",
-      "blockNumber": 67220671
     }
   ],
   "activity": {
     "transfers1h": 0,
-    "transfers24h": 0,
-    "transfers7d": 235
+    "transfers24h": 3,
+    "transfers7d": 226
   },
   "history": [
     {
@@ -2184,7 +2184,7 @@
     },
     {
       "address": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "178151871110128668"
+      "value": "178671871110128668"
     },
     {
       "address": "0xB12c7Fd6FB7E814Ec4485bB0b4B51e170f9689eb",
@@ -2248,7 +2248,7 @@
     },
     {
       "address": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
-      "value": "15206471681193568"
+      "value": "15336471681193568"
     },
     {
       "address": "0x4BEEe88C0D2A511fa9b60226Dfc53d8e86fc99f1",
@@ -2287,12 +2287,12 @@
       "value": "1176600000000000"
     },
     {
-      "address": "0x78c2964b2e382765da32021B2ec79Da721621625",
-      "value": "1056367889522764"
-    },
-    {
       "address": "0x05124996a5B65cd77C579Ee69936574246cf149a",
       "value": "505193879279886"
+    },
+    {
+      "address": "0x78c2964b2e382765da32021B2ec79Da721621625",
+      "value": "406367889522764"
     },
     {
       "address": "0x8147D4d7578E661004E25FFD3F9Fd7bac1F6Fb06",
