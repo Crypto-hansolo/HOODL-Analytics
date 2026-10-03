@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-10-03T13:39:42.157Z",
+  "generatedAt": "2026-10-03T17:37:58.876Z",
   "source": {
     "name": "Blockscout API v2",
     "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x9fb3c2D71424122a5886DaC627177385d185DF09/transfers",
@@ -13,10 +13,98 @@
     "pagesFetched": 2,
     "maxPages": 20,
     "coverageComplete7d": true,
-    "oldestTransferAt": "2026-09-26T10:17:13.000000Z",
+    "oldestTransferAt": "2026-09-26T13:30:23.000000Z",
     "note": "Transfer activity is complete through the last 7 days at snapshot time. Pool swaps, fees, rewards, and holder ranking are not inferred from transfers."
   },
   "transfers": [
+    {
+      "hash": "0xeb09ded4290df090663728df40f5be749f32fbd22dcc95ccfe8672cf1b6de3a1",
+      "from": "0xb92fe925DC43a0ECdE6c8b1a2709c170Ec4fFf4f",
+      "to": "0x5A4bC07128a4425464ef8F84ae7c97509D70e6EF",
+      "value": "898232306113314",
+      "timestamp": "2026-10-03T17:04:31.000000Z",
+      "blockNumber": 79247128
+    },
+    {
+      "hash": "0xeb09ded4290df090663728df40f5be749f32fbd22dcc95ccfe8672cf1b6de3a1",
+      "from": "0x6aa80DbBed9ae5aB45FbF61f9644faDA3b29326E",
+      "to": "0xb92fe925DC43a0ECdE6c8b1a2709c170Ec4fFf4f",
+      "value": "898232306113314",
+      "timestamp": "2026-10-03T17:04:31.000000Z",
+      "blockNumber": 79247128
+    },
+    {
+      "hash": "0xeb09ded4290df090663728df40f5be749f32fbd22dcc95ccfe8672cf1b6de3a1",
+      "from": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
+      "to": "0x6aa80DbBed9ae5aB45FbF61f9644faDA3b29326E",
+      "value": "135433953628355",
+      "timestamp": "2026-10-03T17:04:31.000000Z",
+      "blockNumber": 79247128
+    },
+    {
+      "hash": "0xeb09ded4290df090663728df40f5be749f32fbd22dcc95ccfe8672cf1b6de3a1",
+      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "to": "0x6aa80DbBed9ae5aB45FbF61f9644faDA3b29326E",
+      "value": "762798352484959",
+      "timestamp": "2026-10-03T17:04:31.000000Z",
+      "blockNumber": 79247128
+    },
+    {
+      "hash": "0x194ccf5c5d84a06c1d29b585b18ae0c82b73fb472717cf57d12b2d01ac625ee4",
+      "from": "0x8Fa691aD89B9aA2B9fEF44C96085f79Cb9d0DfBA",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "950000000000000",
+      "timestamp": "2026-10-03T16:04:22.000000Z",
+      "blockNumber": 79211354
+    },
+    {
+      "hash": "0x194ccf5c5d84a06c1d29b585b18ae0c82b73fb472717cf57d12b2d01ac625ee4",
+      "from": "0x8Fa691aD89B9aA2B9fEF44C96085f79Cb9d0DfBA",
+      "to": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
+      "value": "50000000000000",
+      "timestamp": "2026-10-03T16:04:22.000000Z",
+      "blockNumber": 79211354
+    },
+    {
+      "hash": "0x4a8391ac80f64313397d7f8be523edcaa010f5a69420df665d9b8758c7bc2f14",
+      "from": "0x8Fa691aD89B9aA2B9fEF44C96085f79Cb9d0DfBA",
+      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "value": "850000000000000",
+      "timestamp": "2026-10-03T16:03:33.000000Z",
+      "blockNumber": 79210853
+    },
+    {
+      "hash": "0x4a8391ac80f64313397d7f8be523edcaa010f5a69420df665d9b8758c7bc2f14",
+      "from": "0x8Fa691aD89B9aA2B9fEF44C96085f79Cb9d0DfBA",
+      "to": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
+      "value": "150000000000000",
+      "timestamp": "2026-10-03T16:03:33.000000Z",
+      "blockNumber": 79210853
+    },
+    {
+      "hash": "0x89f55614cc25eca301883772f5542d9da04d5fef422702852dabf28d892b7ce6",
+      "from": "0xb92fe925DC43a0ECdE6c8b1a2709c170Ec4fFf4f",
+      "to": "0x478FFba8eA4945fB9327812231dfB1c6cAFD2C49",
+      "value": "620636793354691",
+      "timestamp": "2026-10-03T13:57:56.000000Z",
+      "blockNumber": 79136474
+    },
+    {
+      "hash": "0x89f55614cc25eca301883772f5542d9da04d5fef422702852dabf28d892b7ce6",
+      "from": "0x09215a470bD585E59EB3F4B612fBD2678131fF9e",
+      "to": "0xb92fe925DC43a0ECdE6c8b1a2709c170Ec4fFf4f",
+      "value": "620636793354691",
+      "timestamp": "2026-10-03T13:57:56.000000Z",
+      "blockNumber": 79136474
+    },
+    {
+      "hash": "0x89f55614cc25eca301883772f5542d9da04d5fef422702852dabf28d892b7ce6",
+      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
+      "to": "0x09215a470bD585E59EB3F4B612fBD2678131fF9e",
+      "value": "620668893444550",
+      "timestamp": "2026-10-03T13:57:56.000000Z",
+      "blockNumber": 79136474
+    },
     {
       "hash": "0x6d4ce4ed4a8bdada455640a8681d08cb42d78fa9fb03b0825232fe1ff93909f2",
       "from": "0xe1e3DbbEe4Bbb2Dff2C9A296C95356B52cebD1C3",
@@ -728,100 +816,12 @@
       "value": "779912974605469",
       "timestamp": "2026-09-26T13:30:23.000000Z",
       "blockNumber": 73119736
-    },
-    {
-      "hash": "0x492339534e832e18b747d6248cf510a493abf5117c361a7bb08cabf46edc4165",
-      "from": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
-      "to": "0x6aa80DbBed9ae5aB45FbF61f9644faDA3b29326E",
-      "value": "196515156096966",
-      "timestamp": "2026-09-26T13:30:23.000000Z",
-      "blockNumber": 73119736
-    },
-    {
-      "hash": "0x492339534e832e18b747d6248cf510a493abf5117c361a7bb08cabf46edc4165",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x6aa80DbBed9ae5aB45FbF61f9644faDA3b29326E",
-      "value": "583397818508503",
-      "timestamp": "2026-09-26T13:30:23.000000Z",
-      "blockNumber": 73119736
-    },
-    {
-      "hash": "0x4eb8773dbf17da16c3d233562a33411b517c72edeb14d67a326f5f73cab50fbc",
-      "from": "0x75F05DF49358eFAC50d68955d8D888f73Fe8D13A",
-      "to": "0x5A4bC07128a4425464ef8F84ae7c97509D70e6EF",
-      "value": "6000000000000000",
-      "timestamp": "2026-09-26T12:09:57.000000Z",
-      "blockNumber": 73071812
-    },
-    {
-      "hash": "0x08dd1b390ecafe1cb979dcf3f3f1f4c4db652f82c55ea0e4cac2edfd025656ee",
-      "from": "0x1521027B665FA38Fa4a642991607ad708376dD7b",
-      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "93426837286340",
-      "timestamp": "2026-09-26T10:18:32.000000Z",
-      "blockNumber": 73005580
-    },
-    {
-      "hash": "0x08dd1b390ecafe1cb979dcf3f3f1f4c4db652f82c55ea0e4cac2edfd025656ee",
-      "from": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
-      "to": "0x1521027B665FA38Fa4a642991607ad708376dD7b",
-      "value": "93426837286340",
-      "timestamp": "2026-09-26T10:18:32.000000Z",
-      "blockNumber": 73005580
-    },
-    {
-      "hash": "0xdfb3b42a11777caf2071f8f4c05b9fb7f2de6c69bfd71e5b6f59655a50baf01b",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0x580837BF30d5E3eC24C409887e809FFD11EF4bed",
-      "value": "11695532496593",
-      "timestamp": "2026-09-26T10:18:32.000000Z",
-      "blockNumber": 73005580
-    },
-    {
-      "hash": "0xdfb3b42a11777caf2071f8f4c05b9fb7f2de6c69bfd71e5b6f59655a50baf01b",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0x703E0af5a79d81a391a5a105efbD104e51C1264A",
-      "value": "1170853935819587",
-      "timestamp": "2026-09-26T10:18:32.000000Z",
-      "blockNumber": 73005580
-    },
-    {
-      "hash": "0xdfb3b42a11777caf2071f8f4c05b9fb7f2de6c69bfd71e5b6f59655a50baf01b",
-      "from": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "to": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "value": "1182549468316180",
-      "timestamp": "2026-09-26T10:18:32.000000Z",
-      "blockNumber": 73005580
-    },
-    {
-      "hash": "0x53dcc7b8b4d59c80c817ef717eb306cc32a8a23900cd25b0e226d0a68f9fcd63",
-      "from": "0x1521027B665FA38Fa4a642991607ad708376dD7b",
-      "to": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "114744007638386",
-      "timestamp": "2026-09-26T10:17:13.000000Z",
-      "blockNumber": 73004801
-    },
-    {
-      "hash": "0x53dcc7b8b4d59c80c817ef717eb306cc32a8a23900cd25b0e226d0a68f9fcd63",
-      "from": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
-      "to": "0x1521027B665FA38Fa4a642991607ad708376dD7b",
-      "value": "114744007638386",
-      "timestamp": "2026-09-26T10:17:13.000000Z",
-      "blockNumber": 73004801
-    },
-    {
-      "hash": "0xae5061d533bdc48a0d7505de4c17b41945c7c78c6a8fe1eaf628eba481fa05c4",
-      "from": "0x9c27F81323BEA26aa0D3FEf1107Fc45EefC26348",
-      "to": "0x580837BF30d5E3eC24C409887e809FFD11EF4bed",
-      "value": "12184243909126",
-      "timestamp": "2026-09-26T10:17:13.000000Z",
-      "blockNumber": 73004801
     }
   ],
   "activity": {
-    "transfers1h": 0,
-    "transfers24h": 1,
-    "transfers7d": 86
+    "transfers1h": 4,
+    "transfers24h": 12,
+    "transfers7d": 97
   },
   "history": [
     {
@@ -1004,7 +1004,7 @@
     },
     {
       "address": "0xF87761231646DA4aa00905c237EaCbfF112Df930",
-      "value": "175602261413950198"
+      "value": "176018794168020689"
     },
     {
       "address": "0xB12c7Fd6FB7E814Ec4485bB0b4B51e170f9689eb",
@@ -1052,7 +1052,7 @@
     },
     {
       "address": "0x5A4bC07128a4425464ef8F84ae7c97509D70e6EF",
-      "value": "23006392901809824"
+      "value": "23904625207923138"
     },
     {
       "address": "0x49438b52DfD36f5dB625C0FF1350b932ba2A0f60",
@@ -1068,7 +1068,7 @@
     },
     {
       "address": "0x0215cC1b1419EC51d0b1B658d2b9fdB60A11151D",
-      "value": "14938781285850273"
+      "value": "15003347332221918"
     },
     {
       "address": "0x4BEEe88C0D2A511fa9b60226Dfc53d8e86fc99f1",
@@ -1087,16 +1087,16 @@
       "value": "10000000000000000"
     },
     {
-      "address": "0x8Fa691aD89B9aA2B9fEF44C96085f79Cb9d0DfBA",
-      "value": "5263575442259732"
-    },
-    {
       "address": "0xeb1Bd9B64A240c537408Ee1f21aA7FACDf7c923f",
       "value": "5024013424633472"
     },
     {
       "address": "0x703E0af5a79d81a391a5a105efbD104e51C1264A",
       "value": "4322029888109281"
+    },
+    {
+      "address": "0x8Fa691aD89B9aA2B9fEF44C96085f79Cb9d0DfBA",
+      "value": "3263575442259732"
     },
     {
       "address": "0x47C5599A5f0aD707BB70101D1FbD463EF93dF5a0",
@@ -1109,6 +1109,10 @@
     {
       "address": "0xDe9a9075692Ec36a5E7bDE220AC623E8b1ed53A6",
       "value": "1176600000000000"
+    },
+    {
+      "address": "0x478FFba8eA4945fB9327812231dfB1c6cAFD2C49",
+      "value": "620636793354691"
     },
     {
       "address": "0x05124996a5B65cd77C579Ee69936574246cf149a",
@@ -1401,6 +1405,10 @@
     {
       "address": "0x6648500c7C2c30f0765c28e2498D2C8737A04e57",
       "value": "45000000000"
+    },
+    {
+      "address": "0x09215a470bD585E59EB3F4B612fBD2678131fF9e",
+      "value": "32100089859"
     },
     {
       "address": "0xf5c4F3Dc02c3FB9279495a8fEF7B0741da956157",
